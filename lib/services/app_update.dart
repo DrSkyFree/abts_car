@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 
 import '../core/app_meta.dart';
-import '../core/settings/display_prefs.dart';
 
 /// 检查更新：数据源走 GitHub Releases
 ///
@@ -56,8 +55,8 @@ class AppUpdate {
   AppUpdate._();
 
   /// GitHub 仓库（检查更新数据源）
-  static const String githubOwner = 'fengqiao57';
-  static const String githubRepo = 'abts';
+  static const String githubOwner = 'DrSkyFree';
+  static const String githubRepo = 'abts_car';
 
   static bool get configured => githubOwner.isNotEmpty && githubRepo.isNotEmpty;
 
@@ -70,18 +69,9 @@ class AppUpdate {
   /// 检查最新版本。
   ///
   /// 未配置仓库时直接返回 [configured=false]，不发起网络请求。
-  ///
-  /// 车机版包名与手机版不同（dev.pages.abts.car），无法直接覆盖安装，
-  /// 因此车机版不参与自动更新引导，避免下载到手机版安装包。
   static Future<UpdateResult> check() async {
     if (!configured) {
       return const UpdateResult(configured: false);
-    }
-    if (DisplayPrefs.isCarBuild) {
-      return const UpdateResult(
-        configured: true,
-        error: '车机版需手动下载对应安装包更新，请到开源仓库获取',
-      );
     }
     try {
       final resp = await Dio().get(
@@ -93,15 +83,22 @@ class AppUpdate {
       );
       final data = resp.data as Map? ?? {};
       String? apkUrl;
+      String? fallbackApkUrl;
       final assets = data['assets'] as List? ?? const [];
       for (final a in assets) {
         final m = a as Map?;
         final name = '${m?['name'] ?? ''}';
-        if (name.endsWith('.apk')) {
-          apkUrl = '${m?['browser_download_url'] ?? ''}';
+        if (!name.endsWith('.apk')) continue;
+        final url = '${m?['browser_download_url'] ?? ''}';
+        if (url.isEmpty) continue;
+        // 车机主流架构是 arm64，优先命中；其它架构作为兜底
+        if (name.contains('arm64')) {
+          apkUrl = url;
           break;
         }
+        fallbackApkUrl ??= url;
       }
+      apkUrl ??= fallbackApkUrl;
       final tag = '${data['tag_name'] ?? ''}';
       return UpdateResult(
         configured: true,
