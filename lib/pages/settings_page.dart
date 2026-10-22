@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
 import '../services/auth_store.dart';
 import '../services/device_service.dart';
+import 'display_settings.dart';
 import 'login_page.dart';
 
 /// 设置（独立页面）：账号信息 + 播放与后台。未登录也可进入
@@ -93,6 +94,10 @@ class _SettingsPageState extends State<SettingsPage> {
         padding: const EdgeInsets.only(top: 8, bottom: 32),
         children: [
           _buildAccountCard(auth),
+          const SizedBox(height: 12),
+          _sectionTitle('车机 / 大屏适配'),
+          // 直接内嵌面板：上下边距 / 缩放一步就能调，不必再进二级页
+          const DisplaySettingsCard(embedded: true),
           const SizedBox(height: 12),
           _sectionTitle('播放与后台'),
           SwitchListTile(

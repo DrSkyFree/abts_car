@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../core/app_meta.dart';
+import '../core/settings/display_prefs.dart';
 
 /// 检查更新：数据源走 GitHub Releases
 ///
@@ -69,9 +70,18 @@ class AppUpdate {
   /// 检查最新版本。
   ///
   /// 未配置仓库时直接返回 [configured=false]，不发起网络请求。
+  ///
+  /// 车机版包名与手机版不同（dev.pages.abts.car），无法直接覆盖安装，
+  /// 因此车机版不参与自动更新引导，避免下载到手机版安装包。
   static Future<UpdateResult> check() async {
     if (!configured) {
       return const UpdateResult(configured: false);
+    }
+    if (DisplayPrefs.isCarBuild) {
+      return const UpdateResult(
+        configured: true,
+        error: '车机版需手动下载对应安装包更新，请到开源仓库获取',
+      );
     }
     try {
       final resp = await Dio().get(

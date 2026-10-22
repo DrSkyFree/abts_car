@@ -15,6 +15,7 @@ import '../utils/format.dart';
 import '../widgets/book_cover.dart';
 import 'book_detail_page.dart';
 import 'cache_sheet.dart';
+import 'display_settings.dart';
 
 /// 全屏播放页（PiliPlus 风格）
 class PlayerPage extends StatefulWidget {
@@ -137,6 +138,19 @@ class _PlayerPageState extends State<PlayerPage> {
               color: player.isOffline ? AppTheme.accent : AppTheme.textSub),
         ),
         const Spacer(),
+        // 车机场景：播放页常被状态栏遮挡，就地提供显示调节入口
+        IconButton(
+          icon: const Icon(Icons.aspect_ratio_rounded, size: 22),
+          color: AppTheme.textSub,
+          tooltip: '显示与缩放',
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const DisplaySettingsCard(embedded: false),
+              ),
+            );
+          },
+        ),
         IconButton(
           icon: const Icon(Icons.share_outlined, size: 22),
           color: AppTheme.textSub,

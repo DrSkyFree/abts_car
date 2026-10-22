@@ -1,4 +1,5 @@
 import java.io.FileInputStream
+import java.util.Base64
 import java.util.Properties
 
 plugins {
@@ -16,6 +17,19 @@ if (hasReleaseKeystore) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+// 车机版识别：与 Dart 侧 `bool.fromEnvironment('ABTS_CAR')` 同源。
+// `flutter build apk --dart-define=ABTS_CAR=1` 会把 dart-define 以 base64 列表形式
+// 传进 gradle 的 `dart-defines` 属性，这里解出来判断，保证 Gradle 与 Dart 判断一致。
+val isCarBuild: Boolean = run {
+    val raw = (project.findProperty("dart-defines") as String?) ?: ""
+    raw.split(',')
+        .filter { it.isNotBlank() }
+        .mapNotNull { encoded ->
+            runCatching { String(Base64.getDecoder().decode(encoded.trim())) }.getOrNull()
+        }
+        .any { it.trim() == "ABTS_CAR=true" }
+}
+
 android {
     namespace = "dev.pages.abts"
     compileSdk = flutter.compileSdkVersion
@@ -31,7 +45,14 @@ android {
     }
 
     defaultConfig {
-        applicationId = "dev.pages.abts"
+        // 车机版使用独立包名，可与手机版并存安装、互不覆盖
+        applicationId = if (isCarBuild) "dev.pages.abts.car" else "dev.pages.abts"
+        // 应用列表中单独标识，避免两个版本混淆
+        manifestPlaceholders["appLabel"] =
+            if (isCarBuild) "阿B听书车机版" else "阿B听书"
+        // 车机默认锁定横屏；手机版交由 Dart 按用户设置动态切换
+        manifestPlaceholders["carOrientation"] =
+            if (isCarBuild) "landscape" else "unspecified"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

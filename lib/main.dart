@@ -2,11 +2,12 @@ import 'dart:async';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
 
 import 'core/network/bili_client.dart';
+import 'core/settings/display_adjust.dart';
+import 'core/settings/display_prefs.dart';
 import 'core/storage/cache_store.dart';
 import 'core/storage/follow_store.dart';
 import 'core/storage/search_history_store.dart';
@@ -24,7 +25,8 @@ import 'services/umeng_analytics.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
-  await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+  // 车机版会在首帧前锁定横屏；普通版保持系统默认方向
+  await DisplayPrefs.instance.load();
 
   // 立即渲染启动页（LOGO + 加载动画），初始化在启动页展示期间执行，避免白屏
   runApp(const AbTingShuApp());
@@ -40,6 +42,7 @@ Future<void> _bootstrap() async {
       BiliClient.instance.initLocal(),
       ShelfStore.instance.load(),
       ThemeController.instance.load(),
+      DisplayPrefs.instance.load(),
       SearchHistoryStore.instance.load(),
       LoginStore.instance.load(),
       FollowStore.instance.load(),
@@ -154,6 +157,10 @@ class _AbTingShuAppState extends State<AbTingShuApp>
             theme: AppTheme.light(),
             darkTheme: AppTheme.dark(),
             themeMode: tc.mode,
+            // 车机适配层：上下边距 + 界面缩放，整树统一生效
+            builder: (context, child) => DisplayAdjust(
+              child: child ?? const SizedBox.shrink(),
+            ),
             home: _ready
                 ? KeyedSubtree(
                     key: ValueKey('theme-${tc.mode.name}'),

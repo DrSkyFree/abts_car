@@ -65,6 +65,7 @@ Flutter · Android · 永久免费 · 开源
 - 关于页：官网、开源仓库、Issue 反馈、协议与免责声明入口
 - 扫码登录（二维码可保存到相册）
 - 外观模式：跟随系统 / 浅色 / 深色
+- **车机 / 大屏适配**：显示界面上下边距 0–100 px 可调、界面缩放 60%–160% 可调、一键预设（避开状态栏 / 紧凑 / 远距离放大）、锁定横屏、沉浸式全屏，实时生效并自动保存（详见 [车机版说明](docs/CAR_MODE.md)）
 - 后台留存保护（电池优化豁免引导）
 - 检查更新：一键比对 GitHub Releases，有新版本直接提示下载
 - 分享原作品链接
@@ -134,6 +135,17 @@ flutter build apk --release            # 通用包
 flutter build apk --release --split-per-abi   # 按架构分包（体积更小）
 # 产物：build/app/outputs/flutter-apk/
 ```
+
+**车机版（横屏大屏）构建**：见 [docs/CAR_MODE.md](docs/CAR_MODE.md)
+
+```bash
+./tool/build_car.sh                    # 车机版 release APK
+# 或：flutter build apk --release --dart-define=ABTS_CAR=1
+```
+
+车机版包名为 `dev.pages.abts.car`（与手机版 `dev.pages.abts` 可并存安装），
+默认锁定横屏，并提供**显示界面上下边距（0–100 px）**与**界面缩放（60%–160%）**调节，
+用于适配车机悬浮状态栏遮挡、屏幕偏小等问题。详见 [docs/CAR_MODE.md](docs/CAR_MODE.md)。
 
 **签名说明**：若存在 `android/key.properties` 则用其中的证书签名，否则回退 debug 签名（便于他人直接构建）。配置格式：
 

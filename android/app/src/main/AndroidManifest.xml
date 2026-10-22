@@ -7,8 +7,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- 车机 / 盒子 / TV 类设备无触摸屏时，按钮仍需可被遥控器方向键聚焦 -->
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <application
-        android:label="阿B听书"
+        android:label="${appLabel}"
         android:name=".AbtsApplication"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -17,6 +19,8 @@
             android:launchMode="singleTop"
             android:taskAffinity=""
             android:theme="@style/LaunchTheme"
+            android:screenOrientation="${carOrientation}"
+            android:resizeableActivity="true"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
