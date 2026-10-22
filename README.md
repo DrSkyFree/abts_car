@@ -72,6 +72,44 @@ Flutter · Android · 永久免费 · 开源
 
 ## 更新日志
 
+### v1.3.0 — 车机版
+
+**新增**
+
+- **车机 / 大屏适配面板**（我的 → 系统设置 → 车机 / 大屏适配）
+  - **显示界面上下边距：0–100 px 可调**，顶部与底部独立调节，单位是**屏幕物理像素**——
+    车机状态栏多为悬浮覆盖在应用之上，系统拿不到 inset，靠这个留白把被压住的按钮「让」出来；
+    填数字时直接对照车机状态栏截图的像素高度即可，不用换算 dp
+  - **界面缩放：60%–160% 可调**，缩小时布局视口同步收缩、网格列数真正重排（一屏容纳更多内容），
+    放大时按钮在屏幕上物理变大（车机远距离观看、点按容错更高）
+  - **触摸命中与视觉位置始终一致**：缩放不是简单拉伸，而是「收缩布局视口 + 变换放大还原」，
+    由 RenderTransform 自动逆变换，不会出现「按钮看得见却点不到」
+  - 一键预设：避开状态栏（上 48 / 下 24 px）、紧凑模式（85%）、远距离放大（130%）、恢复默认
+  - 锁定横屏（车机固定安装时防竖屏误触）、沉浸式全屏（隐藏系统状态栏，比手动留边距更彻底）
+  - 所有设置**立即生效并自动保存**；播放页顶栏也加了显示调节快捷入口，就地就能调
+- **车机版构建通道**：`--dart-define=ABTS_CAR=true`，独立包名 `dev.pages.abts.car`、
+  独立应用名「阿B听书车机版」、默认锁定横屏，可与手机版**并存安装、互不覆盖**
+- 车机版说明文档 [docs/CAR_MODE.md](docs/CAR_MODE.md)
+
+**修复**
+
+- **新版 Flutter / Kotlin 下无法构建**（三处，均已在 `2550238` 修复）
+  - *JVM 目标不一致*：插件未声明 `compileOptions` 时 Java 侧落到 1.8，而 Kotlin 侧跟随当前 JDK（17），
+    构建报 `Inconsistent JVM Target Compatibility Between Java and Kotlin Tasks`。
+    现统一把各插件的 `compileOptions` 对齐到 17
+  - *`umeng_common_sdk` 重复源*：该插件包内同时存在 `.java` 与 `.kt` 两份同名实现，
+    新版 Kotlin 编译器报 `Redeclaration`。配置期移除重复的 Kotlin 源，保留 Java 实现
+  - *车机标记失效*：Dart 的 `bool.fromEnvironment` 只把字符串 `"true"` 视为真，
+    原先的 `--dart-define=ABTS_CAR=1` 在 Dart 侧是 false，会导致包名与标签没按车机版生成。
+    现统一为 `=true`，并补了回归断言
+- 「检查更新」原先指向上游仓库，车机版会跳到别人的 Release；现统一指向本仓库，
+  且下载项优先选 arm64（车机主流架构）
+
+**其它**
+
+- 单元测试扩充到 24 项，含「缩放后按钮触摸命中与视觉位置一致」「右下角按钮不越界」；
+  另有 110 项数学断言与 25 项构建变体断言
+
 ### v1.2.0
 
 **新增**
@@ -142,7 +180,9 @@ Flutter · Android · 永久免费 · 开源
 ## 从源码构建
 
 ```bash
-# 环境：Flutter 3.38.x（Dart 3.10+）、JDK 17、Android SDK
+# 环境：Flutter 3.38.x 及以上（Dart 3.10+）、JDK 17、Android SDK
+# 实测可用：Flutter 3.47.7 / Dart 3.13.5 / JDK 17.0.20 / AGP 8.11.1 / Kotlin 2.2.20
+# 构建 Android 包需要 Android NDK 28.x（Flutter 会自动按平台版本下载）
 flutter pub get
 flutter build apk --release            # 通用包
 flutter build apk --release --split-per-abi   # 按架构分包（体积更小）
