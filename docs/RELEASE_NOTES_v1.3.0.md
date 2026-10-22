@@ -23,7 +23,7 @@
 
 ```bash
 ./tool/build_car.sh                    # 车机版 release APK
-flutter build apk --release --dart-define=ABTS_CAR=1
+flutter build apk --release --dart-define=ABTS_CAR=true
 ```
 
 车机版与手机版**包名不同，可同时安装在一台设备上，互不覆盖**：

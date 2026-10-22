@@ -17,7 +17,7 @@
 ./tool/build_car.sh --debug    # debug 包快速验证
 
 # 方式二：原生命令
-flutter build apk --release --dart-define=ABTS_CAR=1
+flutter build apk --release --dart-define=ABTS_CAR=true
 ```
 
 车机版与手机版的差异：

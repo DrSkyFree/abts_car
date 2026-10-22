@@ -153,7 +153,7 @@ flutter build apk --release --split-per-abi   # 按架构分包（体积更小�
 
 ```bash
 ./tool/build_car.sh                    # 车机版 release APK
-# 或：flutter build apk --release --dart-define=ABTS_CAR=1
+# 或：flutter build apk --release --dart-define=ABTS_CAR=true
 ```
 
 车机版包名为 `dev.pages.abts.car`（与手机版 `dev.pages.abts` 可并存安装），

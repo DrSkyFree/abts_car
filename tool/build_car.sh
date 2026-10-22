@@ -28,13 +28,13 @@ for arg in "$@"; do
   esac
 done
 
-echo "==> 车机版构建（ABTS_CAR=1，包名 dev.pages.abts.car）"
+echo "==> 车机版构建（ABTS_CAR=true，包名 dev.pages.abts.car）"
 
 flutter pub get
 
 flutter build apk \
   --"$MODE" \
-  --dart-define=ABTS_CAR=1 \
+  --dart-define=ABTS_CAR=true \
   $SPLIT
 
 echo

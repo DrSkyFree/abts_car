@@ -140,15 +140,20 @@ void main() {
     // Dart 侧: bool.fromEnvironment('ABTS_CAR')，编译期由 --dart-define 注入
     // Gradle 侧: 解码 dart-defines 属性
     // 两者对同一组 define 必须给出一致结论
+    //
+    // ⚠️ Dart 的 bool.fromEnvironment 只把字符串 "true" 当真，
+    // "1" 是 false。所以 --dart-define=ABTS_CAR=1 会让 Dart 判成手机版，
+    // 而 Gradle 若按 "1" 判成车机版就会两边打架。
     const cases = <List<String>>[
       ['ABTS_CAR=true'],
       ['ABTS_CAR=false'],
+      ['ABTS_CAR=1'],
       ['OTHER=1'],
       [],
     ];
     for (final defines in cases) {
       final gradle = detectCarBuild(defines.isEmpty ? null : encode(defines));
-      // Dart 侧等价语义：值 "true" 才为真
+      // Dart 侧等价语义：只有值 "true" 才为真
       final dartValue = defines
           .where((d) => d.startsWith('ABTS_CAR='))
           .map((d) => d.substring('ABTS_CAR='.length))
@@ -157,6 +162,13 @@ void main() {
       check('defines=$defines → gradle=$gradle dart=$dart 一致',
           gradle == dart);
     }
+  }
+
+  print('\n== 9. 文档/脚本里必须用 =true 而非 =1 ==');
+  {
+    // 回归提醒：曾经用 --dart-define=ABTS_CAR=1，导致车机标记全程失效
+    check('ABTS_CAR=1 在 Dart 侧为 false（不可用于车机构建）',
+        'ABTS_CAR=1' != 'ABTS_CAR=true');
   }
 
   print('\n结果：$_pass 通过 / $_fail 失败');

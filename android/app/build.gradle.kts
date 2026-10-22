@@ -18,8 +18,13 @@ if (hasReleaseKeystore) {
 }
 
 // 车机版识别：与 Dart 侧 `bool.fromEnvironment('ABTS_CAR')` 同源。
-// `flutter build apk --dart-define=ABTS_CAR=1` 会把 dart-define 以 base64 列表形式
-// 传进 gradle 的 `dart-defines` 属性，这里解出来判断，保证 Gradle 与 Dart 判断一致。
+// `flutter build apk --dart-define=ABTS_CAR=true` 会把 dart-define 以 base64 列表
+// 形式传进 gradle 的 `dart-defines` 属性，这里解出来判断，保证 Gradle 与 Dart 判断一致。
+//
+// ⚠️ 必须用 `=true` 而不是 `=1`：Dart 的 bool.fromEnvironment 只把字符串 "true"
+// 视为真，`=1` 在 Dart 侧是 false，会导致 Gradle 判成车机版而 Dart 判成手机版。
+// 这里额外兼容 "1"，避免用户按直觉写错时 Gradle 与 Dart 判断不一致
+// （Gradle 侧多认不会造成危害，但两边必须同源，故以 "true" 为准）。
 val isCarBuild: Boolean = run {
     val raw = (project.findProperty("dart-defines") as String?) ?: ""
     raw.split(',')
