@@ -34,6 +34,25 @@ class _PlayerPageState extends State<PlayerPage> {
   /// 播放键是否持有遥控器/键盘焦点（遥控端画描边提示）
   bool _playFocused = false;
 
+  /// 左侧内容块（标题 → 睡眠定时）实测高度：右侧圆形封面的直径与它一致，
+  /// 因此调整左侧行距时封面会自动跟着变大变小
+  final GlobalKey _leftBlockKey = GlobalKey();
+  double? _leftBlockHeight;
+
+  void _measureLeftBlock() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final box = _leftBlockKey.currentContext?.findRenderObject() as RenderBox?;
+      if (box == null || !box.hasSize) return;
+      final h = box.size.height;
+      if (h <= 0) return;
+      final old = _leftBlockHeight;
+      if (old == null || (h - old).abs() > 0.5) {
+        setState(() => _leftBlockHeight = h);
+      }
+    });
+  }
+
   /// 提前抓住播放器引用：在 dispose() 里再 context.read 会触发
   /// provider 的「查找已失活 widget 的祖先」断言。
   BookPlayer? _playerRef;
@@ -131,6 +150,7 @@ class _PlayerPageState extends State<PlayerPage> {
             ],
           );
         }
+        _measureLeftBlock();
         return Column(
           children: [
             _buildAppBar(player),
@@ -149,6 +169,7 @@ class _PlayerPageState extends State<PlayerPage> {
                           child: ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 640),
                             child: Column(
+                              key: _leftBlockKey,
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 _buildTitle(book, chapter, dense: dense),
@@ -162,16 +183,15 @@ class _PlayerPageState extends State<PlayerPage> {
                       },
                     ),
                   ),
-                  // 圆形封面：直径与左侧「标题 → 睡眠定时」整块内容等高
+                  // 圆形封面：直径取左侧内容块的实测高度，行距一改就跟着变
                   Expanded(
                     flex: 5,
                     child: LayoutBuilder(
                       builder: (context, rc) {
-                        // 0.68 为实测校准值：圆形上下边缘刚好与「标题上沿」
-                        // 和「睡眠定时」下沿齐平
+                        final base = _leftBlockHeight ?? rc.maxHeight * 0.68;
                         final d = math.min(
                           rc.maxWidth - 32,
-                          rc.maxHeight * 0.68,
+                          math.min(rc.maxHeight, base),
                         );
                         return _buildCover(book, maxSize: d, circle: true);
                       },
@@ -562,7 +582,7 @@ class _PlayerPageState extends State<PlayerPage> {
       // 车机：上方留白把控制键与进度条分开，下方留白把倍速等功能条再推远
       padding: dense
           ? const EdgeInsets.symmetric(vertical: 2)
-          : EdgeInsets.only(top: big ? 24 : 12, bottom: big ? 34 : 12),
+          : EdgeInsets.only(top: big ? 24 : 12, bottom: big ? 46 : 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
