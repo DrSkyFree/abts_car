@@ -26,9 +26,14 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # 固定 Flutter 版本：3.44.x 的 Dart 为 3.12，满足 pubspec.lock 的 SDK 约束；
+      # 同时它的 Gradle 最低要求是 8.7（并且 8.14 以下才警告），与本项目
+      # Gradle 8.14 / AGP 8.11.1 / Kotlin 2.2.20 完全匹配。
+      # 若改用 channel: stable，会拉到 3.50+，要求 Gradle >= 9.3.1 而构建失败。
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.44.9'
           channel: stable
           cache: true
 
