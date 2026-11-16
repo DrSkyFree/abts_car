@@ -167,9 +167,11 @@ class _PlayerPageState extends State<PlayerPage> {
                     flex: 5,
                     child: LayoutBuilder(
                       builder: (context, rc) {
+                        // 0.68 为实测校准值：圆形上下边缘刚好与「标题上沿」
+                        // 和「睡眠定时」下沿齐平
                         final d = math.min(
                           rc.maxWidth - 32,
-                          rc.maxHeight * 0.74,
+                          rc.maxHeight * 0.68,
                         );
                         return _buildCover(book, maxSize: d, circle: true);
                       },
