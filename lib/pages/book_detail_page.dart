@@ -284,7 +284,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
             ),
             Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 760),
+                constraints: const BoxConstraints(maxWidth: 900),
                 child: bottomBar,
               ),
             ),
@@ -475,10 +475,10 @@ class _BookDetailPageState extends State<BookDetailPage> {
   /// 车机上整体加大、换成亚克力面板，播放键用强调色实心圆，方便盲操作。
   Widget _buildNowPlaying(BookPlayer player, Book book) {
     final chapter = player.currentChapter;
-    final radius = BorderRadius.circular(24);
+    final radius = BorderRadius.circular(28);
     return AcrylicPanel(
-      radius: 24,
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      radius: 28,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       child: InkWell(
         borderRadius: radius,
         onTap: () {
@@ -488,10 +488,10 @@ class _BookDetailPageState extends State<BookDetailPage> {
         child: Row(
           children: [
             ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: BookCover(url: book.pic, width: 56, height: 56),
+              borderRadius: BorderRadius.circular(16),
+              child: BookCover(url: book.pic, width: 66, height: 66),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -500,13 +500,13 @@ class _BookDetailPageState extends State<BookDetailPage> {
                   Text(
                     player.isPlaying ? '正在播放' : '已暂停',
                     style: TextStyle(
-                      fontSize: 12.5,
+                      fontSize: 13.5,
                       color: AppTheme.accent,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.4,
                     ),
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 4),
                   Text(
                     chapter == null
                         ? book.cleanTitle
@@ -514,7 +514,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 14.5,
+                      fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.textMain,
                     ),
@@ -542,8 +542,8 @@ class _BookDetailPageState extends State<BookDetailPage> {
                   customBorder: const CircleBorder(),
                   onTap: player.togglePlay,
                   child: Container(
-                    width: 52,
-                    height: 52,
+                    width: 62,
+                    height: 62,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
@@ -567,7 +567,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
                           ? Icons.pause_rounded
                           : Icons.play_arrow_rounded,
                       color: Colors.white,
-                      size: 30,
+                      size: 36,
                     ),
                   ),
                 ),

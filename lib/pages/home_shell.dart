@@ -68,7 +68,7 @@ class _HomeShellState extends State<HomeShell> {
     );
 
     if (wide) {
-      // 车机/电视的左侧导航：加宽到 104dp，图标与文字同步加大（车机上手指、
+      // 车机/电视的左侧导航：加宽到 118dp，图标与文字同步加大（车机上手指、
       // 手套都更难精细点击）；搜索入口放在「发现」和「我的」之间，符合主驾
       // 伸手距离，也不必再滑到底部去找。
       return Scaffold(
@@ -77,7 +77,7 @@ class _HomeShellState extends State<HomeShell> {
           child: Row(
             children: [
               SizedBox(
-                width: 104,
+                width: 118,
                 child: Column(
                   children: [
                     const SizedBox(height: 10),
@@ -165,7 +165,7 @@ class _HomeShellState extends State<HomeShell> {
 }
 
 /// 侧栏底部的搜索入口：图标 + 文字，聚焦时描边（遥控器可达）
-/// 左侧导航项：104dp 宽的侧栏里给足点击面积（车机上手指操作），
+/// 左侧导航项：118dp 宽的侧栏里给足点击面积（车机上手指操作），
 /// 选中态用品牌色底 + 品牌色图标文字，聚焦时再描一圈品牌色边。
 class _RailItem extends StatefulWidget {
   final IconData icon;
@@ -208,7 +208,7 @@ class _RailItemState extends State<_RailItem> {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 160),
             curve: Curves.easeOut,
-            height: 74,
+            height: 82,
             decoration: BoxDecoration(
               color: selected
                   ? AppTheme.accent.withValues(alpha: 0.18)
@@ -225,14 +225,14 @@ class _RailItemState extends State<_RailItem> {
               children: [
                 Icon(
                   selected ? widget.selectedIcon : widget.icon,
-                  size: 27,
+                  size: 30,
                   color: selected ? AppTheme.accent : AppTheme.textSub,
                 ),
-                const SizedBox(height: 5),
+                const SizedBox(height: 6),
                 Text(
                   widget.label,
                   style: TextStyle(
-                    fontSize: 13.5,
+                    fontSize: 14.5,
                     height: 1.15,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                     color: selected ? AppTheme.accent : AppTheme.textSub,

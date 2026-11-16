@@ -162,7 +162,7 @@ class _PlayerPageState extends State<PlayerPage> {
                       },
                     ),
                   ),
-                  Expanded(flex: 5, child: _buildCover(book, maxSize: 330)),
+                  Expanded(flex: 5, child: _buildCover(book, maxSize: 300)),
                 ],
               ),
             ),
@@ -529,9 +529,9 @@ class _PlayerPageState extends State<PlayerPage> {
     final tv = TvMode.isTv(context);
     // 车机按钮整体放大一档：行车中看不清、也对不准
     final big = tv || DisplaySettings.instance.isCar;
-    final ringSize = big ? 88.0 : (dense ? 64.0 : 74.0);
-    final ringIcon = big ? 52.0 : (dense ? 40.0 : 44.0);
-    final side = big ? 58.0 : (dense ? 44.0 : 48.0);
+    final ringSize = big ? 96.0 : (dense ? 64.0 : 74.0);
+    final ringIcon = big ? 56.0 : (dense ? 40.0 : 44.0);
+    final side = big ? 64.0 : (dense ? 44.0 : 48.0);
     final gap = big ? 14.0 : 8.0;
     return Padding(
       padding: EdgeInsets.symmetric(vertical: dense ? 2 : (big ? 14 : 12)),
