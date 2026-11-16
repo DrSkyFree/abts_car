@@ -13,9 +13,9 @@ import 'core/storage/follow_store.dart';
 import 'core/storage/search_history_store.dart';
 import 'core/storage/shelf_store.dart';
 import 'core/theme/app_theme.dart';
+import 'core/theme/display_frame.dart';
 import 'core/theme/display_settings.dart';
 import 'core/theme/theme_controller.dart';
-import 'core/theme/tv_mode.dart';
 import 'pages/home_shell.dart';
 import 'pages/splash_screen.dart';
 import 'player/bili_audio_handler.dart';
@@ -169,7 +169,7 @@ class _AbTingShuAppState extends State<AbTingShuApp>
             // 全局面板：字号补偿 + 宽屏方向键导航 + 车机的缩放/边距。
             builder: (context, child) {
               if (child == null) return const SizedBox.shrink();
-              return _DisplayFrame(child: child);
+              return DisplayFrame(child: child);
             },
             home: _ready
                 ? KeyedSubtree(
@@ -184,89 +184,3 @@ class _AbTingShuAppState extends State<AbTingShuApp>
   }
 }
 
-/// 全局面板：把「字号缩放 / 界面缩放 / 四周边距」套到整棵组件树。
-///
-/// 车机中控的状态栏是系统覆盖层，应用拿到的 `MediaQuery.padding` 往往为 0，
-/// 内容会被顶栏压住；这里用占屏幕百分比的边距留出安全区。界面缩放采用
-/// 「缩小逻辑视口 + 等比放大绘制」的方式（与系统显示大小调节一致），
-/// 所以字体、按钮、列表、封面一起等比变化，且文字仍是矢量绘制不会糊。
-class _DisplayFrame extends StatelessWidget {
-  final Widget child;
-  const _DisplayFrame({required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    final mq = MediaQuery.of(context);
-    final ds = DisplaySettings.instance;
-    final wide = TvMode.useWideLayout(context);
-    // 电视端字号补偿（车机走自己的字号设置，避免与 TV 补偿叠加）
-    final tvScaler = TvMode.textScalerFor(context);
-    final textScaler = TextScaler.linear(
-      (tvScaler?.scale(1.0) ?? mq.textScaler.scale(1.0)) * ds.textScale,
-    );
-
-    // 没有 AppBar 的宽屏页面也要保证状态栏图标与主题明暗一致
-    final overlay = Theme.of(context).brightness == Brightness.dark
-        ? SystemUiOverlayStyle.light.copyWith(statusBarColor: Colors.transparent)
-        : SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent);
-
-    final insets = ds.insetsFor(mq.size);
-    final hasInsets = insets.top > 0 ||
-        insets.bottom > 0 ||
-        insets.left > 0 ||
-        insets.right > 0;
-    final zoom = ds.scale;
-
-    // 系统上报的内边距是外层物理尺寸，换算到缩放后的逻辑坐标系；
-    // 车机拿不到状态栏留白（padding 为 0），由用户设置的边距补足。
-    EdgeInsets scaled(EdgeInsets e) => EdgeInsets.fromLTRB(
-          e.left / zoom,
-          e.top / zoom,
-          e.right / zoom,
-          e.bottom / zoom,
-        );
-
-    MediaQueryData base() => mq.copyWith(
-          textScaler: textScaler,
-          navigationMode:
-              wide ? NavigationMode.directional : mq.navigationMode,
-        );
-
-    Widget content;
-    if (hasInsets || zoom != 1.0) {
-      final availW =
-          (mq.size.width - insets.horizontal).clamp(1.0, mq.size.width);
-      final availH =
-          (mq.size.height - insets.vertical).clamp(1.0, mq.size.height);
-      final logical = Size(availW / zoom, availH / zoom);
-      content = Padding(
-        padding: insets,
-        child: ClipRect(
-          child: FittedBox(
-            fit: BoxFit.fill,
-            child: SizedBox(
-              width: logical.width,
-              height: logical.height,
-              child: MediaQuery(
-                data: base().copyWith(
-                  size: logical,
-                  padding: scaled(mq.padding),
-                  viewPadding: scaled(mq.viewPadding),
-                  viewInsets: scaled(mq.viewInsets),
-                ),
-                child: child,
-              ),
-            ),
-          ),
-        ),
-      );
-    } else {
-      content = MediaQuery(data: base(), child: child);
-    }
-
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: overlay,
-      child: content,
-    );
-  }
-}

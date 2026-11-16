@@ -51,6 +51,15 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
+      # 静态检查不阻断发布，仅把问题打印到日志便于排查
+      - name: Flutter analyze
+        continue-on-error: true
+        run: flutter analyze
+
+      # 车机布局验收：1920x720 下的状态栏避让、字号、封面列数、即时生效
+      - name: Flutter test
+        run: flutter test
+
       - name: Build release APKs
         run: |
           flutter build apk --release --split-per-abi
