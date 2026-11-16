@@ -34,7 +34,8 @@ android {
         applicationId = "dev.pages.abts"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // 车机/车机盒子普遍停留在 Android 7~9，最低按 Android 7.0（API 24）适配
+        minSdk = 24
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

@@ -12,6 +12,7 @@ import '../player/book_player.dart';
 import '../services/bili_api.dart';
 import '../services/umeng_analytics.dart';
 import '../utils/format.dart';
+import '../widgets/acrylic_panel.dart';
 import '../widgets/book_cover.dart';
 import '../widgets/tv_page_scaffold.dart';
 import 'cache_sheet.dart';
@@ -69,12 +70,10 @@ class _BookDetailPageState extends State<BookDetailPage> {
     return TvPageScaffold(
       title: const Text('书籍详情'),
       body: _loading
-          ?  Center(
-              child: CircularProgressIndicator(color: AppTheme.accent),
-            )
+          ? Center(child: CircularProgressIndicator(color: AppTheme.accent))
           : _error != null
-              ? _buildError()
-              : _buildContent(),
+          ? _buildError()
+          : _buildContent(),
     );
   }
 
@@ -83,10 +82,12 @@ class _BookDetailPageState extends State<BookDetailPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-           Icon(Icons.error_outline, size: 48, color: AppTheme.textHint),
+          Icon(Icons.error_outline, size: 48, color: AppTheme.textHint),
           const SizedBox(height: 12),
-          Text(_error!,
-              style:  TextStyle(fontSize: 13, color: AppTheme.textSub)),
+          Text(
+            _error!,
+            style: TextStyle(fontSize: 13, color: AppTheme.textSub),
+          ),
           const SizedBox(height: 16),
           FilledButton(onPressed: _load, child: const Text('重试')),
         ],
@@ -121,101 +122,103 @@ class _BookDetailPageState extends State<BookDetailPage> {
       // 刷新书架元数据
       final fresh = _book;
       if (fresh != null && onShelf) {
-        await context
-            .read<ShelfStore>()
-            .add(fresh, withProgress: shelf.byBvid(fresh.bvid));
+        await context.read<ShelfStore>().add(
+          fresh,
+          withProgress: shelf.byBvid(fresh.bvid),
+        );
       }
     }
 
     final headerSection = Column(
       mainAxisSize: MainAxisSize.min,
-      children: [
-        _buildHeader(book),
-        const Divider(),
-      ],
+      children: [_buildHeader(book), const Divider()],
     );
 
     // 目录区表头（正序/倒序、批量缓存、从头播放）
     final sectionHeader = Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
-                  child: Row(
-                    children: [
-                       Icon(Icons.format_list_bulleted,
-                          size: 18, color: AppTheme.accent),
-                      const SizedBox(width: 8),
-Text(
-                          '目录（${chapters.length} 章）',
-                          style:  TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.textMain,
-                          ),
-                        ),
-                      if (doneCount > 0)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 8),
-                          child: Text(
-                            '已听 $doneCount',
-                            style: TextStyle(
-                                fontSize: 12, color: AppTheme.accent),
-                          ),
-                        ),
-                      const Spacer(),
-                      TextButton.icon(
-                        onPressed: chapters.isEmpty
-                            ? null
-                            : () => setState(() => _reverse = !_reverse),
-                        icon: Icon(
-                          _reverse
-                              ? Icons.arrow_downward_rounded
-                              : Icons.arrow_upward_rounded,
-                          size: 16,
-                          color: AppTheme.textSub,
-                        ),
-                        label: Text(
-                          _reverse ? '倒序' : '正序',
-                          style: TextStyle(
-                              fontSize: 13, color: AppTheme.textSub),
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: chapters.isEmpty
-                            ? null
-                            : () => CacheSheet.show(context, book: book),
-                        tooltip: '批量缓存',
-                        icon:  Icon(Icons.download_for_offline_outlined,
-                            color: AppTheme.textSub),
-                      ),
-                      IconButton(
-                        onPressed: chapters.isEmpty ? null : () => _playFrom(0),
-                        tooltip: '从头播放',
-                        icon:  Icon(Icons.replay,
-                            color: AppTheme.textSub),
-                      ),
-                    ],
-                  ),
-                );
+      padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
+      child: Row(
+        children: [
+          Icon(Icons.format_list_bulleted, size: 18, color: AppTheme.accent),
+          const SizedBox(width: 8),
+          Text(
+            '目录（${chapters.length} 章）',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textMain,
+            ),
+          ),
+          if (doneCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Text(
+                '已听 $doneCount',
+                style: TextStyle(fontSize: 12, color: AppTheme.accent),
+              ),
+            ),
+          const Spacer(),
+          TextButton.icon(
+            onPressed: chapters.isEmpty
+                ? null
+                : () => setState(() => _reverse = !_reverse),
+            icon: Icon(
+              _reverse
+                  ? Icons.arrow_downward_rounded
+                  : Icons.arrow_upward_rounded,
+              size: 16,
+              color: AppTheme.textSub,
+            ),
+            label: Text(
+              _reverse ? '倒序' : '正序',
+              style: TextStyle(fontSize: 13, color: AppTheme.textSub),
+            ),
+          ),
+          IconButton(
+            onPressed: chapters.isEmpty
+                ? null
+                : () => CacheSheet.show(context, book: book),
+            tooltip: '批量缓存',
+            icon: Icon(
+              Icons.download_for_offline_outlined,
+              color: AppTheme.textSub,
+            ),
+          ),
+          IconButton(
+            onPressed: chapters.isEmpty ? null : () => _playFrom(0),
+            tooltip: '从头播放',
+            icon: Icon(Icons.replay, color: AppTheme.textSub),
+          ),
+        ],
+      ),
+    );
 
     final chapterTiles = _orderedIndexes(chapters.length).map((i) {
-                  // 有逐章记录时以记录为准，否则退回序号推导
-                  final listened = hasDoneRecords
-                      ? shelf.isChapterDone(book.bvid, chapters[i].cid)
-                      : (lastListened >= 0 && i < lastListened);
-                  return _ChapterTile(
-                    index: i,
-                    chapter: chapters[i],
-                    listened: listened,
-                    isCurrent: i == currentIdx,
-                    isPlaying:
-                        i == currentIdx && isCurrentBook && player.isPlaying,
-                    bvid: book.bvid,
-                    onTap: () => _playFrom(i),
-                    onCache: () => _cacheOne(chapters[i]),
-                  );
-                }).toList();
+      // 有逐章记录时以记录为准，否则退回序号推导
+      final listened = hasDoneRecords
+          ? shelf.isChapterDone(book.bvid, chapters[i].cid)
+          : (lastListened >= 0 && i < lastListened);
+      return _ChapterTile(
+        index: i,
+        chapter: chapters[i],
+        listened: listened,
+        isCurrent: i == currentIdx,
+        isPlaying: i == currentIdx && isCurrentBook && player.isPlaying,
+        bvid: book.bvid,
+        onTap: () => _playFrom(i),
+        onCache: () => _cacheOne(chapters[i]),
+      );
+    }).toList();
 
     final bottomBar = _buildBottomBar(
-        player, book, onShelf, resumeIndex, resumeMs, hasProgress, chapters);
+      player,
+      book,
+      onShelf,
+      resumeIndex,
+      resumeMs,
+      hasProgress,
+      chapters,
+    );
 
     return LayoutBuilder(
       builder: (context, cons) {
@@ -259,7 +262,10 @@ Text(
                     ),
                   ),
                   VerticalDivider(
-                      width: 1, thickness: 0.6, color: AppTheme.divider),
+                    width: 1,
+                    thickness: 0.6,
+                    color: AppTheme.divider,
+                  ),
                   Expanded(
                     child: RefreshIndicator(
                       onRefresh: refresh,
@@ -304,7 +310,7 @@ Text(
                   book.cleanTitle,
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style:  TextStyle(
+                  style: TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,
                     height: 1.3,
@@ -349,17 +355,24 @@ Text(
                         Text(
                           book.author.isEmpty ? '未知UP主' : book.author,
                           style: TextStyle(
-                              fontSize: 13, color: AppTheme.textSub),
+                            fontSize: 13,
+                            color: AppTheme.textSub,
+                          ),
                         ),
                         // UP 主名可点，进入他的主页只看他的作品
                         if (book.mid != 0)
-                          Icon(Icons.chevron_right_rounded,
-                              size: 16, color: AppTheme.textHint),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            size: 16,
+                            color: AppTheme.textHint,
+                          ),
                         const Spacer(),
                         Text(
                           Fmt.date(book.pubdate),
                           style: TextStyle(
-                              fontSize: 12, color: AppTheme.textHint),
+                            fontSize: 12,
+                            color: AppTheme.textHint,
+                          ),
                         ),
                       ],
                     ),
@@ -379,8 +392,7 @@ Text(
       children: [
         Icon(icon, size: 14, color: AppTheme.textSub),
         const SizedBox(width: 3),
-        Text(text,
-            style:  TextStyle(fontSize: 12, color: AppTheme.textSub)),
+        Text(text, style: TextStyle(fontSize: 12, color: AppTheme.textSub)),
       ],
     );
   }
@@ -435,7 +447,9 @@ Text(
                               Text(
                                 hasProgress ? '继续收听' : '开始收听',
                                 style: const TextStyle(
-                                    fontSize: 16, fontWeight: FontWeight.w600),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ],
                           ),
@@ -443,7 +457,9 @@ Text(
                             Text(
                               '第 ${resumeIndex + 1} 章 · ${_msText(resumeMs)}',
                               style: const TextStyle(
-                                  fontSize: 11, fontWeight: FontWeight.w400),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w400,
+                              ),
                             ),
                         ],
                       ),
@@ -455,74 +471,108 @@ Text(
     );
   }
 
-  /// 本书正在播放：底部显示当前播放迷你条（点击回到播放页）
+  /// 本书正在播放：底部浮层（点击回到播放页）。
+  /// 车机上整体加大、换成亚克力面板，播放键用强调色实心圆，方便盲操作。
   Widget _buildNowPlaying(BookPlayer player, Book book) {
     final chapter = player.currentChapter;
-    return Material(
-      color: AppTheme.surfaceHigh,
-      borderRadius: BorderRadius.circular(12),
+    final radius = BorderRadius.circular(24);
+    return AcrylicPanel(
+      radius: 24,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: radius,
         onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const PlayerPage()),
-          );
+          Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const PlayerPage()));
         },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          child: Row(
-            children: [
-              BookCover(url: book.pic, width: 38, height: 38),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      player.isPlaying ? '正在播放' : '已暂停',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppTheme.accent,
-                        fontWeight: FontWeight.w600,
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: BookCover(url: book.pic, width: 56, height: 56),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    player.isPlaying ? '正在播放' : '已暂停',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: AppTheme.accent,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    chapter == null
+                        ? book.cleanTitle
+                        : '第 ${chapter.page} 章 · ${chapter.part}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textMain,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (player.loading)
+              const Padding(
+                padding: EdgeInsets.all(14),
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.4,
+                    color: AppTheme.accent,
+                  ),
+                ),
+              )
+            else
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: player.togglePlay,
+                  child: Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          AppTheme.accent,
+                          Color.lerp(AppTheme.accent, Colors.black, 0.28)!,
+                        ],
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.accent.withValues(alpha: 0.42),
+                          blurRadius: 18,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      chapter == null
-                          ? book.cleanTitle
-                          : '第 ${chapter.page} 章 · ${chapter.part}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 12, color: AppTheme.textMain),
+                    child: Icon(
+                      player.isPlaying
+                          ? Icons.pause_rounded
+                          : Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 30,
                     ),
-                  ],
+                  ),
                 ),
               ),
-              if (player.loading)
-                const Padding(
-                  padding: EdgeInsets.all(10),
-                  child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppTheme.accent),
-                  ),
-                )
-              else
-                IconButton(
-                  onPressed: player.togglePlay,
-                  icon: Icon(
-                    player.isPlaying
-                        ? Icons.pause_rounded
-                        : Icons.play_arrow_rounded,
-                    color: AppTheme.accent,
-                    size: 28,
-                  ),
-                ),
-            ],
-          ),
+          ],
         ),
       ),
     );
@@ -549,19 +599,14 @@ Text(
   /// 点击 UP 主名进入他的主页（只看这一个人的内容）
   void _openUp(Book book) {
     if (book.mid == 0 || book.author.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('该作品没有 UP 主信息')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('该作品没有 UP 主信息')));
       return;
     }
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => UpHomePage(
-          up: UpUser(
-            mid: book.mid,
-            name: book.author,
-            face: book.authorFace,
-          ),
+          up: UpUser(mid: book.mid, name: book.author, face: book.authorFace),
         ),
       ),
     );
@@ -586,18 +631,25 @@ Text(
     return list;
   }
 
-  Future<void> _startPlay(bool hasProgress, int resumeIndex, int resumeMs) async {
+  Future<void> _startPlay(
+    bool hasProgress,
+    int resumeIndex,
+    int resumeMs,
+  ) async {
     final player = context.read<BookPlayer>();
     player.flushProgress();
     if (hasProgress) {
-      await player.playBook(_book!, resumeIndex: resumeIndex, resumeMs: resumeMs);
+      await player.playBook(
+        _book!,
+        resumeIndex: resumeIndex,
+        resumeMs: resumeMs,
+      );
     } else {
       await player.playBook(_book!);
     }
     if (!mounted) return;
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const PlayerPage()),
-    );
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const PlayerPage()));
   }
 
   /// 缓存单集到本地（供离线收听）
@@ -719,8 +771,7 @@ class _ChapterTile extends StatelessWidget {
         child: Row(
           children: [
             if (isPlaying)
-               Icon(Icons.graphic_eq_rounded,
-                  size: 18, color: AppTheme.accent)
+              Icon(Icons.graphic_eq_rounded, size: 18, color: AppTheme.accent)
             else if (_hasOwnIndex)
               SizedBox(
                 width: 18,
@@ -832,8 +883,7 @@ class _CacheButton extends StatelessWidget {
                 '已缓存',
                 style: TextStyle(fontSize: 11, color: AppTheme.accent),
               )
-            : Icon(Icons.download_rounded,
-                size: 18, color: AppTheme.textHint),
+            : Icon(Icons.download_rounded, size: 18, color: AppTheme.textHint),
       ),
     );
   }

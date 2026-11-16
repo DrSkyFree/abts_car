@@ -10,6 +10,7 @@ import '../core/network/api_config.dart';
 import '../core/storage/bookmark_store.dart';
 import '../core/storage/shelf_store.dart';
 import '../core/theme/app_theme.dart';
+import '../core/theme/display_settings.dart';
 import '../core/theme/tv_mode.dart';
 import '../models/book.dart';
 import '../models/chapter.dart';
@@ -65,11 +66,10 @@ class _PlayerPageState extends State<PlayerPage> {
         ),
         body: Center(
           child: player.loading
-              ?  CircularProgressIndicator(color: AppTheme.accent)
+              ? CircularProgressIndicator(color: AppTheme.accent)
               : Text(
                   player.error ?? '尚未播放任何内容',
-                  style:  TextStyle(
-                      fontSize: 13, color: AppTheme.textSub),
+                  style: TextStyle(fontSize: 13, color: AppTheme.textSub),
                 ),
         ),
       );
@@ -137,7 +137,8 @@ class _PlayerPageState extends State<PlayerPage> {
             Expanded(
               child: Row(
                 children: [
-                  Expanded(flex: 5, child: _buildCover(book)),
+                  // 车机主驾在左侧：所有播放操作放左边，伸手可及；
+                  // 封面移到右侧做视觉焦点，并限制尺寸避免占满半屏
                   Expanded(
                     flex: 6,
                     child: LayoutBuilder(
@@ -161,6 +162,7 @@ class _PlayerPageState extends State<PlayerPage> {
                       },
                     ),
                   ),
+                  Expanded(flex: 5, child: _buildCover(book, maxSize: 330)),
                 ],
               ),
             ),
@@ -188,11 +190,12 @@ class _PlayerPageState extends State<PlayerPage> {
           player.loading
               ? '加载中…'
               : player.isOffline
-                  ? '离线播放中'
-                  : '正在收听',
-          style:  TextStyle(
-              fontSize: 14,
-              color: player.isOffline ? AppTheme.accent : AppTheme.textSub),
+              ? '离线播放中'
+              : '正在收听',
+          style: TextStyle(
+            fontSize: 14,
+            color: player.isOffline ? AppTheme.accent : AppTheme.textSub,
+          ),
         ),
         const Spacer(),
         IconButton(
@@ -213,16 +216,16 @@ class _PlayerPageState extends State<PlayerPage> {
       await SharePlus.instance.share(
         ShareParams(
           subject: b.cleanTitle,
-          text: '我在「${AppMeta.name}」收听《${b.cleanTitle}》\n'
+          text:
+              '我在「${AppMeta.name}」收听《${b.cleanTitle}》\n'
               '原作品：$url\n'
               '官网：${AppMeta.siteUrl}',
         ),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('分享失败，请稍后重试')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('分享失败，请稍后重试')));
     }
   }
 
@@ -245,12 +248,15 @@ class _PlayerPageState extends State<PlayerPage> {
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                 child: Row(
                   children: [
-                     Icon(Icons.format_list_bulleted,
-                        size: 18, color: AppTheme.accent),
+                    Icon(
+                      Icons.format_list_bulleted,
+                      size: 18,
+                      color: AppTheme.accent,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       '目录 · ${chapters.length} 章',
-                      style:  TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.textMain,
@@ -259,7 +265,7 @@ class _PlayerPageState extends State<PlayerPage> {
                     const Spacer(),
                     IconButton(
                       tooltip: '从头播放',
-                      icon:  Icon(Icons.replay, color: AppTheme.textSub),
+                      icon: Icon(Icons.replay, color: AppTheme.textSub),
                       onPressed: () {
                         Navigator.of(ctx).pop();
                         player.playChapterIndex(0);
@@ -275,22 +281,31 @@ class _PlayerPageState extends State<PlayerPage> {
                   itemBuilder: (ctx, i) {
                     final c = chapters[i];
                     final active = i == player.index;
-                    final done = bvid.isNotEmpty && shelf.isChapterDone(bvid, c.cid);
+                    final done =
+                        bvid.isNotEmpty && shelf.isChapterDone(bvid, c.cid);
                     return ListTile(
                       dense: true,
                       leading: active
-                          ?  Icon(Icons.graphic_eq_rounded,
-                              size: 18, color: AppTheme.accent)
+                          ? Icon(
+                              Icons.graphic_eq_rounded,
+                              size: 18,
+                              color: AppTheme.accent,
+                            )
                           : SizedBox(
                               width: 18,
                               child: done
-                                  ? Icon(Icons.check_rounded,
-                                      size: 15, color: AppTheme.textHint)
+                                  ? Icon(
+                                      Icons.check_rounded,
+                                      size: 15,
+                                      color: AppTheme.textHint,
+                                    )
                                   : Text(
                                       '${i + 1}',
                                       textAlign: TextAlign.center,
-                                      style:  TextStyle(
-                                          fontSize: 13, color: AppTheme.textSub),
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: AppTheme.textSub,
+                                      ),
                                     ),
                             ),
                       title: Text(
@@ -299,8 +314,9 @@ class _PlayerPageState extends State<PlayerPage> {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 14,
-                          fontWeight:
-                              active ? FontWeight.w700 : FontWeight.w400,
+                          fontWeight: active
+                              ? FontWeight.w700
+                              : FontWeight.w400,
                           color: active
                               ? AppTheme.accent
                               : (done ? AppTheme.textHint : AppTheme.textMain),
@@ -308,8 +324,10 @@ class _PlayerPageState extends State<PlayerPage> {
                       ),
                       trailing: Text(
                         c.durationText,
-                        style:  TextStyle(
-                            fontSize: 12, color: AppTheme.textHint),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textHint,
+                        ),
                       ),
                       onTap: () {
                         Navigator.of(ctx).pop();
@@ -327,32 +345,38 @@ class _PlayerPageState extends State<PlayerPage> {
     );
   }
 
-  Widget _buildCover(Book book) {
+  Widget _buildCover(Book book, {double maxSize = double.infinity}) {
     final player = context.watch<BookPlayer>();
+    final bounded = maxSize.isFinite;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40),
-        child: AspectRatio(
-          aspectRatio: 1,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              BookCover(
-                url: book.pic,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              if (player.loading)
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child:  Center(
-                    child: CircularProgressIndicator(
-                        color: AppTheme.accent),
-                  ),
+        padding: EdgeInsets.symmetric(horizontal: bounded ? 16 : 40),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: bounded ? maxSize : double.infinity,
+            maxHeight: bounded ? maxSize : double.infinity,
+          ),
+          child: AspectRatio(
+            aspectRatio: 1,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                BookCover(
+                  url: book.pic,
+                  borderRadius: BorderRadius.circular(24),
                 ),
-            ],
+                if (player.loading)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Center(
+                      child: CircularProgressIndicator(color: AppTheme.accent),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -386,7 +410,7 @@ class _PlayerPageState extends State<PlayerPage> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
-                      style:  TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.textMain,
@@ -394,8 +418,11 @@ class _PlayerPageState extends State<PlayerPage> {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  Icon(Icons.chevron_right_rounded,
-                      size: 18, color: AppTheme.textSub),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: AppTheme.textSub,
+                  ),
                 ],
               ),
             ),
@@ -406,8 +433,7 @@ class _PlayerPageState extends State<PlayerPage> {
               '第 ${chapter.page} 章 · ${chapter.part}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style:  TextStyle(
-                  fontSize: 13, color: AppTheme.textSub),
+              style: TextStyle(fontSize: 13, color: AppTheme.textSub),
             ),
         ],
       ),
@@ -415,8 +441,11 @@ class _PlayerPageState extends State<PlayerPage> {
   }
 
   /// 进度条：高频位置刷新走 ValueListenable，避免整页重建
-  Widget _buildProgress(BookPlayer player, Chapter? chapter,
-      {bool dense = false}) {
+  Widget _buildProgress(
+    BookPlayer player,
+    Chapter? chapter, {
+    bool dense = false,
+  }) {
     return ValueListenableBuilder<Duration>(
       valueListenable: player.positionTick,
       builder: (context, tick, _) {
@@ -432,8 +461,11 @@ class _PlayerPageState extends State<PlayerPage> {
   }
 
   Widget _buildProgressContent(
-      BookPlayer player, Duration position, Duration duration,
-      {bool dense = false}) {
+    BookPlayer player,
+    Duration position,
+    Duration duration, {
+    bool dense = false,
+  }) {
     final progress = duration.inMilliseconds > 0
         ? position.inMilliseconds / duration.inMilliseconds
         : 0.0;
@@ -465,7 +497,8 @@ class _PlayerPageState extends State<PlayerPage> {
               },
               onChangeEnd: (v) {
                 final target = Duration(
-                    milliseconds: (v * duration.inMilliseconds).round());
+                  milliseconds: (v * duration.inMilliseconds).round(),
+                );
                 setState(() => _dragValue = -1);
                 player.seek(target);
               },
@@ -476,12 +509,14 @@ class _PlayerPageState extends State<PlayerPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(Fmt.duration(position),
-                    style:  TextStyle(
-                        fontSize: 12, color: AppTheme.textSub)),
-                Text(Fmt.duration(duration),
-                    style:  TextStyle(
-                        fontSize: 12, color: AppTheme.textSub)),
+                Text(
+                  Fmt.duration(position),
+                  style: TextStyle(fontSize: 12, color: AppTheme.textSub),
+                ),
+                Text(
+                  Fmt.duration(duration),
+                  style: TextStyle(fontSize: 12, color: AppTheme.textSub),
+                ),
               ],
             ),
           ),
@@ -492,71 +527,164 @@ class _PlayerPageState extends State<PlayerPage> {
 
   Widget _buildControls(BookPlayer player, {bool dense = false}) {
     final tv = TvMode.isTv(context);
-    final ringSize = tv ? 84.0 : (dense ? 64.0 : 72.0);
-    final ringRadius = tv ? 48.0 : (dense ? 36.0 : 40.0);
-    final ringIcon = tv ? 50.0 : (dense ? 40.0 : 44.0);
+    // 车机按钮整体放大一档：行车中看不清、也对不准
+    final big = tv || DisplaySettings.instance.isCar;
+    final ringSize = big ? 88.0 : (dense ? 64.0 : 74.0);
+    final ringIcon = big ? 52.0 : (dense ? 40.0 : 44.0);
+    final side = big ? 58.0 : (dense ? 44.0 : 48.0);
+    final gap = big ? 14.0 : 8.0;
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: dense ? 2 : 12),
+      padding: EdgeInsets.symmetric(vertical: dense ? 2 : (big ? 14 : 12)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          IconButton(
-            iconSize: tv ? 44 : 38,
-            color: player.hasPrev ? AppTheme.textMain : AppTheme.textHint,
-            icon: const Icon(Icons.skip_previous_rounded),
-            onPressed: player.hasPrev ? player.previous : null,
-          ),
-          const SizedBox(width: 6),
-          IconButton(
-            tooltip: '后退 15 秒',
-            onPressed: () => player.seekRelative(-15),
-            icon: _Seek15Icon(
-                forward: false, color: AppTheme.textSub, size: tv ? 38 : 30),
-          ),
-          const SizedBox(width: 10),
-          InkResponse(
-            onTap: player.togglePlay,
-            radius: ringRadius,
-            // TV/遥控器进入播放页时，焦点默认落在播放键上，确认键直接暂停/续播
-            autofocus: tv,
-            onFocusChange: (v) {
-              if (mounted) setState(() => _playFocused = v);
-            },
-            child: Container(
-              width: ringSize,
-              height: ringSize,
-              decoration: BoxDecoration(
-                color: AppTheme.accent,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: _playFocused ? Colors.white : Colors.transparent,
-                  width: 3,
-                ),
-              ),
-              child: Icon(
-                player.isPlaying
-                    ? Icons.pause_rounded
-                    : Icons.play_arrow_rounded,
-                color: Colors.white,
-                size: ringIcon,
-              ),
+          _roundAction(
+            size: side,
+            onTap: player.hasPrev ? player.previous : null,
+            child: Icon(
+              Icons.skip_previous_rounded,
+              size: side * 0.56,
+              color: player.hasPrev ? AppTheme.textMain : AppTheme.textHint,
             ),
           ),
-          const SizedBox(width: 10),
-          IconButton(
-            tooltip: '前进 15 秒',
-            onPressed: () => player.seekRelative(15),
-            icon: _Seek15Icon(
-                forward: true, color: AppTheme.textSub, size: tv ? 38 : 30),
+          SizedBox(width: gap),
+          _roundAction(
+            size: side,
+            onTap: () => player.seekRelative(-15),
+            tooltip: '后退 15 秒',
+            child: _Seek15Icon(
+              forward: false,
+              color: AppTheme.textMain,
+              size: side * 0.5,
+            ),
           ),
-          const SizedBox(width: 6),
-          IconButton(
-            iconSize: tv ? 44 : 38,
-            color: player.hasNext ? AppTheme.textMain : AppTheme.textHint,
-            icon: const Icon(Icons.skip_next_rounded),
-            onPressed: player.hasNext ? player.next : null,
+          SizedBox(width: gap),
+          _playButton(player, ringSize, ringIcon),
+          SizedBox(width: gap),
+          _roundAction(
+            size: side,
+            onTap: () => player.seekRelative(15),
+            tooltip: '前进 15 秒',
+            child: _Seek15Icon(
+              forward: true,
+              color: AppTheme.textMain,
+              size: side * 0.5,
+            ),
+          ),
+          SizedBox(width: gap),
+          _roundAction(
+            size: side,
+            onTap: player.hasNext ? player.next : null,
+            child: Icon(
+              Icons.skip_next_rounded,
+              size: side * 0.56,
+              color: player.hasNext ? AppTheme.textMain : AppTheme.textHint,
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// 亚克力圆形按钮：半透明渐变 + 背景模糊 + 细描边 + 柔和投影。
+  /// 车机中控多为深色背景，纯色按钮容易糊在一起，毛玻璃能拉开层次。
+  Widget _roundAction({
+    required double size,
+    required Widget child,
+    VoidCallback? onTap,
+    String? tooltip,
+  }) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final button = InkWell(
+      onTap: onTap,
+      customBorder: const CircleBorder(),
+      child: ClipOval(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: dark
+                    ? [
+                        Colors.white.withValues(alpha: 0.18),
+                        Colors.white.withValues(alpha: 0.05),
+                      ]
+                    : [
+                        Colors.white.withValues(alpha: 0.88),
+                        Colors.white.withValues(alpha: 0.55),
+                      ],
+              ),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: dark ? 0.24 : 0.9),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: dark ? 0.28 : 0.08),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Center(
+              child: onTap == null
+                  ? Opacity(opacity: 0.35, child: child)
+                  : child,
+            ),
+          ),
+        ),
+      ),
+    );
+    return tooltip == null ? button : Tooltip(message: tooltip, child: button);
+  }
+
+  /// 主播放键：强调色渐变 + 发光投影，在车机上一眼能找到
+  Widget _playButton(BookPlayer player, double size, double iconSize) {
+    return InkResponse(
+      onTap: player.togglePlay,
+      radius: size / 2,
+      // TV/遥控器进入播放页时，焦点默认落在播放键上，确认键直接暂停/续播
+      autofocus: TvMode.isTv(context),
+      onFocusChange: (v) {
+        if (mounted) setState(() => _playFocused = v);
+      },
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppTheme.accent,
+              Color.lerp(AppTheme.accent, Colors.black, 0.3)!,
+            ],
+          ),
+          border: Border.all(
+            color: _playFocused
+                ? Colors.white
+                : Colors.white.withValues(alpha: 0.2),
+            width: 3,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.accent.withValues(alpha: 0.45),
+              blurRadius: 24,
+              spreadRadius: 2,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Icon(
+          player.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+          color: Colors.white,
+          size: iconSize,
+        ),
       ),
     );
   }
@@ -591,7 +719,9 @@ class _PlayerPageState extends State<PlayerPage> {
                         if (pct > 100)
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 1),
+                              horizontal: 6,
+                              vertical: 1,
+                            ),
                             decoration: BoxDecoration(
                               color: AppTheme.accent.withValues(alpha: 0.14),
                               borderRadius: BorderRadius.circular(6),
@@ -599,7 +729,9 @@ class _PlayerPageState extends State<PlayerPage> {
                             child: Text(
                               '增益',
                               style: TextStyle(
-                                  fontSize: 10, color: AppTheme.accent),
+                                fontSize: 10,
+                                color: AppTheme.accent,
+                              ),
                             ),
                           ),
                         const Spacer(),
@@ -618,22 +750,25 @@ class _PlayerPageState extends State<PlayerPage> {
                     SliderTheme(
                       data: SliderTheme.of(context).copyWith(
                         trackHeight: 3,
-                        thumbShape:
-                            const RoundSliderThumbShape(enabledThumbRadius: 7),
+                        thumbShape: const RoundSliderThumbShape(
+                          enabledThumbRadius: 7,
+                        ),
                         activeTrackColor: AppTheme.accent,
                         inactiveTrackColor: AppTheme.divider,
                         thumbColor: AppTheme.accent,
-                        overlayShape:
-                            const RoundSliderOverlayShape(overlayRadius: 16),
-                        overlayColor:
-                            AppTheme.accent.withValues(alpha: 0.2),
+                        overlayShape: const RoundSliderOverlayShape(
+                          overlayRadius: 16,
+                        ),
+                        overlayColor: AppTheme.accent.withValues(alpha: 0.2),
                       ),
                       child: Slider(
                         min: 0,
                         max: BookPlayer.maxVolumePct,
                         divisions: 40,
                         value: player.volumePct.clamp(
-                            0.0, BookPlayer.maxVolumePct),
+                          0.0,
+                          BookPlayer.maxVolumePct,
+                        ),
                         onChanged: (v) {
                           player.setVolumePct(v);
                           setSheet(() {});
@@ -644,8 +779,7 @@ class _PlayerPageState extends State<PlayerPage> {
                       pct > 100
                           ? '超过 100% 为增益模式：适合音量偏小的音源，过大会破音'
                           : '拖动调节音量，最高可放大到 200%',
-                      style:
-                          TextStyle(fontSize: 11, color: AppTheme.textHint),
+                      style: TextStyle(fontSize: 11, color: AppTheme.textHint),
                     ),
                     const SizedBox(height: 10),
                     Wrap(
@@ -668,8 +802,7 @@ class _PlayerPageState extends State<PlayerPage> {
                                     : AppTheme.textSub,
                               ),
                             ),
-                            selected:
-                                (player.volumePct - o.$1).abs() < 0.001,
+                            selected: (player.volumePct - o.$1).abs() < 0.001,
                             selectedColor: AppTheme.accent,
                             onSelected: (_) {
                               player.setVolumePct(o.$1);
@@ -709,8 +842,11 @@ class _PlayerPageState extends State<PlayerPage> {
                     padding: const EdgeInsets.fromLTRB(20, 0, 12, 0),
                     child: Row(
                       children: [
-                        Icon(Icons.bookmarks_rounded,
-                            size: 18, color: AppTheme.accent),
+                        Icon(
+                          Icons.bookmarks_rounded,
+                          size: 18,
+                          color: AppTheme.accent,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           '播放书签',
@@ -732,12 +868,17 @@ class _PlayerPageState extends State<PlayerPage> {
                               ),
                             );
                           },
-                          icon: Icon(Icons.bookmark_add_outlined,
-                              size: 18, color: AppTheme.accent),
+                          icon: Icon(
+                            Icons.bookmark_add_outlined,
+                            size: 18,
+                            color: AppTheme.accent,
+                          ),
                           label: Text(
                             '加书签',
                             style: TextStyle(
-                                fontSize: 13, color: AppTheme.accent),
+                              fontSize: 13,
+                              color: AppTheme.accent,
+                            ),
                           ),
                         ),
                       ],
@@ -749,9 +890,10 @@ class _PlayerPageState extends State<PlayerPage> {
                       child: Text(
                         '还没有书签。\n听到关键处点「加书签」，之后在这里一点就能跳回去。',
                         style: TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.textSub,
-                            height: 1.6),
+                          fontSize: 12,
+                          color: AppTheme.textSub,
+                          height: 1.6,
+                        ),
                       ),
                     )
                   else
@@ -763,19 +905,26 @@ class _PlayerPageState extends State<PlayerPage> {
                           final b = list[i];
                           return ListTile(
                             dense: true,
-                            leading: Icon(Icons.bookmark_rounded,
-                                size: 18, color: AppTheme.accent),
+                            leading: Icon(
+                              Icons.bookmark_rounded,
+                              size: 18,
+                              color: AppTheme.accent,
+                            ),
                             title: Text(
                               b.chapterTitle,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                  fontSize: 13, color: AppTheme.textMain),
+                                fontSize: 13,
+                                color: AppTheme.textMain,
+                              ),
                             ),
                             subtitle: Text(
                               '${b.positionText} · ${b.createdText}',
                               style: TextStyle(
-                                  fontSize: 11, color: AppTheme.textHint),
+                                fontSize: 11,
+                                color: AppTheme.textHint,
+                              ),
                             ),
                             onTap: () {
                               Navigator.of(ctx).pop();
@@ -783,8 +932,11 @@ class _PlayerPageState extends State<PlayerPage> {
                             },
                             trailing: IconButton(
                               tooltip: '删除',
-                              icon: Icon(Icons.delete_outline,
-                                  size: 18, color: AppTheme.textSub),
+                              icon: Icon(
+                                Icons.delete_outline,
+                                size: 18,
+                                color: AppTheme.textSub,
+                              ),
                               onPressed: () => store.remove(b.id),
                             ),
                           );
@@ -842,7 +994,9 @@ class _PlayerPageState extends State<PlayerPage> {
                         Text(
                           '当前 ${player.rateLabel}',
                           style: TextStyle(
-                              fontSize: 13, color: AppTheme.accent),
+                            fontSize: 13,
+                            color: AppTheme.accent,
+                          ),
                         ),
                       ],
                     ),
@@ -867,7 +1021,11 @@ class _PlayerPageState extends State<PlayerPage> {
   }
 
   Widget _speedTile(
-      BuildContext ctx, BookPlayer player, StateSetter setSheet, double r) {
+    BuildContext ctx,
+    BookPlayer player,
+    StateSetter setSheet,
+    double r,
+  ) {
     final active = (r - player.rate).abs() < 0.001;
     return ListTile(
       title: Text(
@@ -878,9 +1036,7 @@ class _PlayerPageState extends State<PlayerPage> {
           fontWeight: active ? FontWeight.w700 : FontWeight.w400,
         ),
       ),
-      trailing: active
-          ? const Icon(Icons.check, color: AppTheme.accent)
-          : null,
+      trailing: active ? const Icon(Icons.check, color: AppTheme.accent) : null,
       onTap: () {
         player.setRate(r);
         setSheet(() {});
@@ -892,109 +1048,148 @@ class _PlayerPageState extends State<PlayerPage> {
       '${r % 1 == 0 ? r.toStringAsFixed(1) : r.toStringAsFixed(2).replaceAll(RegExp(r'0+$'), '')}x';
 
   Widget _buildActionRow(BookPlayer player, {bool dense = false}) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: dense ? 4 : 12),
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        spacing: 10,
-        runSpacing: 8,
-        children: [
-          ActionChip(
-            avatar:  Icon(Icons.speed_rounded,
-                size: 16,
-                color: player.rate != 1.0 ? AppTheme.accent : AppTheme.textSub),
-            label: Text(
-              '倍速 ${player.rateLabel}',
-              style: TextStyle(
-                fontSize: 12,
-                color: player.rate != 1.0 ? AppTheme.accent : null,
-                fontWeight: player.rate != 1.0 ? FontWeight.w700 : null,
-              ),
-            ),
-            onPressed: () => _showSpeedSheet(player),
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Theme(
+      // 功能按钮统一亚克力观感：半透明底 + 细描边 + 大圆角 + 更大点按区域
+      data: Theme.of(context).copyWith(
+        chipTheme: ChipThemeData(
+          backgroundColor: dark
+              ? Colors.white.withValues(alpha: 0.10)
+              : Colors.white.withValues(alpha: 0.78),
+          side: BorderSide(
+            color: Colors.white.withValues(alpha: dark ? 0.20 : 0.9),
           ),
-          ActionChip(
-            avatar: Icon(
-              player.volumePct == 0
-                  ? Icons.volume_off_rounded
-                  : player.volumePct > 1.0
-                      ? Icons.volume_up_rounded
-                      : Icons.volume_down_rounded,
-              size: 16,
-              color:
-                  player.volumePct != 1.0 ? AppTheme.accent : AppTheme.textSub,
-            ),
-            label: Text(
-              '音量 ${(player.volumePct * 100).round()}%',
-              style: TextStyle(
-                fontSize: 12,
-                color: player.volumePct != 1.0 ? AppTheme.accent : null,
-                fontWeight: player.volumePct != 1.0 ? FontWeight.w700 : null,
-              ),
-            ),
-            onPressed: () => _showVolumeSheet(player),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
           ),
-          ActionChip(
-            avatar:  Icon(Icons.format_list_bulleted,
-                size: 16, color: AppTheme.accent),
-            label: Text(
-              '目录 · ${player.chapters.length} 章',
-              style: const TextStyle(fontSize: 12),
-            ),
-            onPressed: () => _showChapterSheet(player),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          labelStyle: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.textMain,
           ),
-          Builder(builder: (context) {
-            final n = context.watch<BookmarkStore>().countOf(player.book!.bvid);
-            return ActionChip(
+        ),
+      ),
+      child: Padding(
+        padding: EdgeInsets.only(bottom: dense ? 4 : 12),
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 10,
+          runSpacing: 8,
+          children: [
+            ActionChip(
               avatar: Icon(
-                Icons.bookmarks_rounded,
+                Icons.speed_rounded,
                 size: 16,
-                color: n > 0 ? AppTheme.accent : AppTheme.textSub,
+                color: player.rate != 1.0 ? AppTheme.accent : AppTheme.textSub,
               ),
               label: Text(
-                n > 0 ? '书签 $n' : '书签',
+                '倍速 ${player.rateLabel}',
                 style: TextStyle(
                   fontSize: 12,
-                  color: n > 0 ? AppTheme.accent : null,
-                  fontWeight: n > 0 ? FontWeight.w700 : null,
+                  color: player.rate != 1.0 ? AppTheme.accent : null,
+                  fontWeight: player.rate != 1.0 ? FontWeight.w700 : null,
                 ),
               ),
-              onPressed: () => _showBookmarkSheet(player),
-            );
-          }),
-          ActionChip(
-            avatar:  Icon(Icons.bedtime_outlined,
-                size: 16, color: AppTheme.accent),
-            label: Text(
-              player.stopAtChapterEnd
-                  ? '播完自动暂停'
-                  : player.sleepRemaining > Duration.zero
-                      ? '睡眠 ${Fmt.sleepText(player.sleepRemaining)}'
-                      : '睡眠定时',
-              style: TextStyle(
-                fontSize: 12,
-                color: player.stopAtChapterEnd ? AppTheme.accent : null,
-                fontWeight:
-                    player.stopAtChapterEnd ? FontWeight.w700 : null,
-              ),
+              onPressed: () => _showSpeedSheet(player),
             ),
-            onPressed: () => _showSleepSheet(player),
-          ),
-          ActionChip(
-            avatar:  Icon(Icons.download_for_offline_outlined,
+            ActionChip(
+              avatar: Icon(
+                player.volumePct == 0
+                    ? Icons.volume_off_rounded
+                    : player.volumePct > 1.0
+                    ? Icons.volume_up_rounded
+                    : Icons.volume_down_rounded,
                 size: 16,
-                color: player.currentCached ? AppTheme.accent : AppTheme.textSub),
-            label: Text(
-              player.currentCached ? '已缓存' : '缓存',
-              style: TextStyle(
-                fontSize: 12,
-                color: player.currentCached ? AppTheme.accent : null,
-                fontWeight: player.currentCached ? FontWeight.w700 : null,
+                color: player.volumePct != 1.0
+                    ? AppTheme.accent
+                    : AppTheme.textSub,
               ),
+              label: Text(
+                '音量 ${(player.volumePct * 100).round()}%',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: player.volumePct != 1.0 ? AppTheme.accent : null,
+                  fontWeight: player.volumePct != 1.0 ? FontWeight.w700 : null,
+                ),
+              ),
+              onPressed: () => _showVolumeSheet(player),
             ),
-            onPressed: () => CacheSheet.show(context, book: player.book),
-          ),
-        ],
+            ActionChip(
+              avatar: Icon(
+                Icons.format_list_bulleted,
+                size: 16,
+                color: AppTheme.accent,
+              ),
+              label: Text(
+                '目录 · ${player.chapters.length} 章',
+                style: const TextStyle(fontSize: 12),
+              ),
+              onPressed: () => _showChapterSheet(player),
+            ),
+            Builder(
+              builder: (context) {
+                final n = context.watch<BookmarkStore>().countOf(
+                  player.book!.bvid,
+                );
+                return ActionChip(
+                  avatar: Icon(
+                    Icons.bookmarks_rounded,
+                    size: 16,
+                    color: n > 0 ? AppTheme.accent : AppTheme.textSub,
+                  ),
+                  label: Text(
+                    n > 0 ? '书签 $n' : '书签',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: n > 0 ? AppTheme.accent : null,
+                      fontWeight: n > 0 ? FontWeight.w700 : null,
+                    ),
+                  ),
+                  onPressed: () => _showBookmarkSheet(player),
+                );
+              },
+            ),
+            ActionChip(
+              avatar: Icon(
+                Icons.bedtime_outlined,
+                size: 16,
+                color: AppTheme.accent,
+              ),
+              label: Text(
+                player.stopAtChapterEnd
+                    ? '播完自动暂停'
+                    : player.sleepRemaining > Duration.zero
+                    ? '睡眠 ${Fmt.sleepText(player.sleepRemaining)}'
+                    : '睡眠定时',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: player.stopAtChapterEnd ? AppTheme.accent : null,
+                  fontWeight: player.stopAtChapterEnd ? FontWeight.w700 : null,
+                ),
+              ),
+              onPressed: () => _showSleepSheet(player),
+            ),
+            ActionChip(
+              avatar: Icon(
+                Icons.download_for_offline_outlined,
+                size: 16,
+                color: player.currentCached
+                    ? AppTheme.accent
+                    : AppTheme.textSub,
+              ),
+              label: Text(
+                player.currentCached ? '已缓存' : '缓存',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: player.currentCached ? AppTheme.accent : null,
+                  fontWeight: player.currentCached ? FontWeight.w700 : null,
+                ),
+              ),
+              onPressed: () => CacheSheet.show(context, book: player.book),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1015,23 +1210,21 @@ class _PlayerPageState extends State<PlayerPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-               Padding(
+              Padding(
                 padding: EdgeInsets.all(16),
                 child: Text(
                   '睡眠定时',
                   style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textMain),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textMain,
+                  ),
                 ),
               ),
               SwitchListTile(
                 value: ctx.watch<BookPlayer>().stopAtChapterEnd,
                 onChanged: (v) => player.setStopAtChapterEnd(v),
-                title: const Text(
-                  '播完本集自动暂停',
-                  style: TextStyle(fontSize: 15),
-                ),
+                title: const Text('播完本集自动暂停', style: TextStyle(fontSize: 15)),
                 subtitle: const Text(
                   '本集播完即停，不自动播放下一集',
                   style: TextStyle(fontSize: 12),
@@ -1040,15 +1233,22 @@ class _PlayerPageState extends State<PlayerPage> {
               ),
               const Divider(height: 1),
               ...options.map((o) {
-                final active = (player.sleepRemaining > Duration.zero &&
-                    (o.$1 > Duration.zero && player.sleepRemaining <= o.$1 + const Duration(minutes: 1))) ||
-                    (o.$1 == Duration.zero && player.sleepRemaining <= Duration.zero);
+                final active =
+                    (player.sleepRemaining > Duration.zero &&
+                        (o.$1 > Duration.zero &&
+                            player.sleepRemaining <=
+                                o.$1 + const Duration(minutes: 1))) ||
+                    (o.$1 == Duration.zero &&
+                        player.sleepRemaining <= Duration.zero);
                 return ListTile(
-                  title: Text(o.$2,
-                      style: TextStyle(
-                          color: active ? AppTheme.accent : AppTheme.textMain)),
+                  title: Text(
+                    o.$2,
+                    style: TextStyle(
+                      color: active ? AppTheme.accent : AppTheme.textMain,
+                    ),
+                  ),
                   trailing: active
-                      ?  Icon(Icons.check, color: AppTheme.accent)
+                      ? Icon(Icons.check, color: AppTheme.accent)
                       : null,
                   onTap: () {
                     if (o.$1 > Duration.zero) {
@@ -1075,7 +1275,11 @@ class _Seek15Icon extends StatelessWidget {
   final bool forward;
   final Color color;
   final double size;
-  const _Seek15Icon({required this.forward, required this.color, this.size = 30});
+  const _Seek15Icon({
+    required this.forward,
+    required this.color,
+    this.size = 30,
+  });
 
   @override
   Widget build(BuildContext context) {

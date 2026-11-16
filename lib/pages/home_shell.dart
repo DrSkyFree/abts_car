@@ -60,76 +60,77 @@ class _HomeShellState extends State<HomeShell> {
         Expanded(
           child: IndexedStack(
             index: _tab,
-            children: const [
-              BookshelfPage(),
-              DiscoverPage(),
-              MyPage(),
-            ],
+            children: const [BookshelfPage(), DiscoverPage(), MyPage()],
           ),
         ),
         const MiniPlayer(),
       ],
     );
 
-    final destinations = [
-      NavigationRailDestination(
-        icon: const Icon(Icons.collections_bookmark_outlined),
-        selectedIcon: const Icon(Icons.collections_bookmark_rounded),
-        label: Text('书架', style: TextStyle(fontSize: 12)),
-      ),
-      NavigationRailDestination(
-        icon: const Icon(Icons.explore_outlined),
-        selectedIcon: const Icon(Icons.explore_rounded),
-        label: Text('发现', style: TextStyle(fontSize: 12)),
-      ),
-      NavigationRailDestination(
-        icon: const Icon(Icons.person_outline_rounded),
-        selectedIcon: const Icon(Icons.person_rounded),
-        label: Text('我的', style: TextStyle(fontSize: 12)),
-      ),
-    ];
-
     if (wide) {
+      // 车机/电视的左侧导航：加宽到 104dp，图标与文字同步加大（车机上手指、
+      // 手套都更难精细点击）；搜索入口放在「发现」和「我的」之间，符合主驾
+      // 伸手距离，也不必再滑到底部去找。
       return Scaffold(
         body: SafeArea(
           bottom: false,
           child: Row(
-          children: [
-            SizedBox(
-              width: 76,
-              child: Column(
-                children: [
-                  const SizedBox(height: 8),
-                  // 续播入口：有在听/上次在听时显示旋转封面
-                  const SizedBox(
-                    height: 48,
-                    child: Center(child: ShelfResumeButton(size: 40)),
-                  ),
-                  const SizedBox(height: 4),
-                  Expanded(
-                    child: NavigationRail(
-                      selectedIndex: _tab,
-                      onDestinationSelected: (i) => HomeTabs.switchTo(i),
-                      labelType: NavigationRailLabelType.all,
-                      groupAlignment: -0.9,
-                      destinations: destinations,
+            children: [
+              SizedBox(
+                width: 104,
+                child: Column(
+                  children: [
+                    const SizedBox(height: 10),
+                    // 续播入口：有在听/上次在听时显示旋转封面
+                    const SizedBox(
+                      height: 56,
+                      child: Center(child: ShelfResumeButton(size: 46)),
                     ),
-                  ),
-                  // 搜索：宽屏没有顶部搜索框，收进侧栏，遥控器可直接聚焦
-                  _RailSearchButton(
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const SearchPage()),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                ],
+                    const SizedBox(height: 6),
+                    _RailItem(
+                      icon: Icons.collections_bookmark_outlined,
+                      selectedIcon: Icons.collections_bookmark_rounded,
+                      label: '书架',
+                      selected: _tab == 0,
+                      onTap: () => HomeTabs.switchTo(0),
+                    ),
+                    _RailItem(
+                      icon: Icons.explore_outlined,
+                      selectedIcon: Icons.explore_rounded,
+                      label: '发现',
+                      selected: _tab == 1,
+                      onTap: () => HomeTabs.switchTo(1),
+                    ),
+                    _RailItem(
+                      icon: Icons.search_rounded,
+                      selectedIcon: Icons.search_rounded,
+                      label: '搜索',
+                      selected: false,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const SearchPage()),
+                        );
+                      },
+                    ),
+                    _RailItem(
+                      icon: Icons.person_outline_rounded,
+                      selectedIcon: Icons.person_rounded,
+                      label: '我的',
+                      selected: _tab == 2,
+                      onTap: () => HomeTabs.switchTo(2),
+                    ),
+                    const Spacer(),
+                    const SizedBox(height: 8),
+                  ],
+                ),
               ),
-            ),
-            VerticalDivider(width: 1, thickness: 0.6, color: AppTheme.divider),
-            Expanded(child: content),
-          ],
+              VerticalDivider(
+                width: 1,
+                thickness: 0.6,
+                color: AppTheme.divider,
+              ),
+              Expanded(child: content),
+            ],
           ),
         ),
       );
@@ -164,41 +165,78 @@ class _HomeShellState extends State<HomeShell> {
 }
 
 /// 侧栏底部的搜索入口：图标 + 文字，聚焦时描边（遥控器可达）
-class _RailSearchButton extends StatefulWidget {
+/// 左侧导航项：104dp 宽的侧栏里给足点击面积（车机上手指操作），
+/// 选中态用品牌色底 + 品牌色图标文字，聚焦时再描一圈品牌色边。
+class _RailItem extends StatefulWidget {
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final bool selected;
   final VoidCallback onTap;
 
-  const _RailSearchButton({required this.onTap});
+  const _RailItem({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
-  State<_RailSearchButton> createState() => _RailSearchButtonState();
+  State<_RailItem> createState() => _RailItemState();
 }
 
-class _RailSearchButtonState extends State<_RailSearchButton> {
+class _RailItemState extends State<_RailItem> {
   bool _focused = false;
 
   @override
   Widget build(BuildContext context) {
+    final selected = widget.selected;
+    final radius = BorderRadius.circular(16);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       child: InkWell(
         onTap: widget.onTap,
         onFocusChange: (v) {
           if (mounted && v != _focused) setState(() => _focused = v);
         },
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: radius,
         child: FocusRing(
           focused: _focused,
-          borderRadius: BorderRadius.circular(14),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+          borderRadius: radius,
+          width: 2.4,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            curve: Curves.easeOut,
+            height: 74,
+            decoration: BoxDecoration(
+              color: selected
+                  ? AppTheme.accent.withValues(alpha: 0.18)
+                  : Colors.transparent,
+              borderRadius: radius,
+              border: Border.all(
+                color: selected
+                    ? AppTheme.accent.withValues(alpha: 0.55)
+                    : Colors.transparent,
+              ),
+            ),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.search_rounded, size: 24, color: AppTheme.textSub),
-                const SizedBox(height: 3),
+                Icon(
+                  selected ? widget.selectedIcon : widget.icon,
+                  size: 27,
+                  color: selected ? AppTheme.accent : AppTheme.textSub,
+                ),
+                const SizedBox(height: 5),
                 Text(
-                  '搜索',
-                  style: TextStyle(fontSize: 12, color: AppTheme.textSub),
+                  widget.label,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    height: 1.15,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    color: selected ? AppTheme.accent : AppTheme.textSub,
+                  ),
                 ),
               ],
             ),
