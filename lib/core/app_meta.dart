@@ -6,13 +6,13 @@ class AppMeta {
   AppMeta._();
 
   static const String name = '阿B听书';
-  static const String version = '1.2.2';
+  static const String version = '1.3.0';
 
   /// 副标题 / 一句话介绍
   static const String tagline = '免登录、无广告、专注收听的 B 站有声小说播放器';
 
   /// 开源仓库
-  static const String repoUrl = 'https://github.com/fengqiao57/abts';
+  static const String repoUrl = 'https://github.com/DrSkyFree/abts_car';
 
   /// 官网
   static const String siteUrl = 'https://abts.pages.dev/';

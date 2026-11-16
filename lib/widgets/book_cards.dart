@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_theme.dart';
+import '../core/theme/display_settings.dart';
 import '../models/book.dart';
 import '../utils/format.dart';
 import 'book_cover.dart';
 
 /// 网格列数：手机 3 列；横屏平板/电视随宽度增加（遥控器更好定位）
+///
+/// 车机大屏的问题正好相反：字太小、封面太大。这里用「物理宽度」判断列数
+/// （乘回界面缩放系数），放大整体界面时封面不会跟着暴涨；再叠加用户的
+/// 封面尺寸系数，系数越大列数越少、封面越大。
 int bookGridColumns(BuildContext context) {
-  final w = MediaQuery.sizeOf(context).width;
+  final ds = DisplaySettings.instance;
+  final w = MediaQuery.sizeOf(context).width * ds.scale / ds.coverScale;
+  if (w >= 2400) return 10;
+  if (w >= 2100) return 9;
+  if (w >= 1800) return 8;
   if (w >= 1400) return 7;
   if (w >= 1100) return 6;
   if (w >= 900) return 5;

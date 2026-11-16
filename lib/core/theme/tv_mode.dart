@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'display_settings.dart';
+
 /// 电视端（Android TV / 电视盒子）判定与显示补偿。
 ///
 /// 判定优先走原生探测（leanback 特性 + 无触摸屏，见 MainActivity 的
@@ -47,6 +49,8 @@ class TvMode {
   /// （宽 ≥ 640dp 且横向）。主框架据此把底部导航换成左侧栏，播放页/详情页
   /// 据此切左右分栏；与方向键导航模式共用同一口径（见 main.dart）。
   static bool useWideLayout(BuildContext context) {
+    // 车机：中控一律按宽屏侧栏布局（方向键/触屏都够用）
+    if (DisplaySettings.instance.isCar) return true;
     if (isTv(context)) return true;
     final size = MediaQuery.sizeOf(context);
     if (size.shortestSide >= 600) return true;
@@ -54,7 +58,11 @@ class TvMode {
   }
 
   /// 电视端字号补偿（非电视返回 null，不做任何干预）。
+  ///
+  /// 车机不在这里放大：车机字号由「屏幕缩放与边距调整」里的字号设置控制，
+  /// 两处叠加会把字放得过大。
   static TextScaler? textScalerFor(BuildContext context) {
+    if (DisplaySettings.instance.isCar) return null;
     if (!isTv(context)) return null;
     final mq = MediaQuery.of(context);
     final base = mq.textScaler.scale(1.0);
