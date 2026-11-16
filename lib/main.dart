@@ -16,7 +16,7 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/display_frame.dart';
 import 'core/theme/display_settings.dart';
 import 'core/theme/theme_controller.dart';
-import 'core/theme/tv_mode.dart';
+import 'core/theme/wide_mode.dart';
 import 'pages/home_shell.dart';
 import 'pages/splash_screen.dart';
 import 'player/bili_audio_handler.dart';
@@ -27,9 +27,9 @@ import 'services/umeng_analytics.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // 电视端优先：强制「传统」焦点高亮模式。
-  // 默认自动模式依赖设备上报输入类型，部分安卓 TV/盒子不触发切换，
-  // 会导致遥控器聚焦时按钮自带高亮不显示；聚焦态才绘制，手机端无副作用。
+  // 宽屏/遥控设备优先：强制「传统」焦点高亮模式。
+  // 默认自动模式依赖设备上报输入类型，部分安卓车机盒不触发切换，
+  // 会导致旋钮/方向键聚焦时按钮自带高亮不显示；聚焦态才绘制，手机端无副作用。
   FocusManager.instance.highlightStrategy =
       FocusHighlightStrategy.alwaysTraditional;
   MediaKit.ensureInitialized();
@@ -55,7 +55,7 @@ Future<void> _bootstrap() async {
       BookmarkStore.instance.load(),
       CacheStore.instance.load(),
       DisplaySettings.instance.load(),
-      TvMode.detect(),
+      WideMode.detect(),
     ]).timeout(const Duration(seconds: 6));
   } catch (e) {
     debugPrint('[main] local init failed: $e');

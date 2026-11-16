@@ -1,5 +1,5 @@
 name: abts
-description: "阿B听书：专注收听有声小说的 Flutter 播放器（搜索、分P连播、断点续播、后台播放、锁屏控制、睡眠定时）"
+description: "阿B听书车机版：专注收听有声小说的 Android 车机播放器（宽屏侧栏、语音可达的大按钮、分P连播、断点续播、后台播放、离线缓存）"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -14,9 +14,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In iOS, build-name is used as CFBundleShortVersionString while build-number is used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-# In Windows, build-name is used as the major, minor, and patch parts
-# of the product and file versions while build-number is used as the build suffix.
-version: 1.4.0+7
+version: 1.4.1+8
 
 environment:
   sdk: ^3.10.8

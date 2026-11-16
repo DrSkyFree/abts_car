@@ -5,7 +5,7 @@ import '../core/storage/cache_store.dart';
 import '../core/theme/app_theme.dart';
 import '../services/auth_store.dart';
 import '../services/device_service.dart';
-import '../widgets/tv_page_scaffold.dart';
+import '../widgets/page_scaffold.dart';
 import 'login_page.dart';
 
 /// 设置（独立页面）：账号信息 + 播放与后台。未登录也可进入
@@ -223,7 +223,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<LoginStore>();
-    return TvPageScaffold(
+    return PageScaffold(
       title: const Text('系统设置'),
       body: ListView(
         padding: const EdgeInsets.only(top: 8, bottom: 32),

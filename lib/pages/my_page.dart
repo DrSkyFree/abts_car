@@ -9,7 +9,7 @@ import '../core/storage/follow_store.dart';
 import '../core/storage/shelf_store.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/theme_controller.dart';
-import '../core/theme/tv_mode.dart';
+import '../core/theme/wide_mode.dart';
 import '../player/book_player.dart';
 import '../services/app_update.dart';
 import '../services/auth_store.dart';
@@ -45,7 +45,7 @@ class MyPage extends StatelessWidget {
     final books = shelf.books;
     final reading = books.where((b) => b.positionMs > 0).toList();
 
-    final wide = TvMode.useWideLayout(context);
+    final wide = WideMode.useWideLayout(context);
 
     return Scaffold(
       // 宽屏顶栏交给侧栏，设置入口在下方菜单里已有

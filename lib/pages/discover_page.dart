@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/storage/cache_store.dart';
 import '../core/storage/shelf_store.dart';
 import '../core/theme/app_theme.dart';
-import '../core/theme/tv_mode.dart';
+import '../core/theme/wide_mode.dart';
 import '../data/seed_books.dart';
 import '../models/book.dart';
 import '../player/book_player.dart';
@@ -30,7 +30,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
   final _controller = TextEditingController();
   final _bili = BiliApi.instance;
 
-  // 搜索条聚焦状态（TV/键盘导航时显示描边）
+  // 搜索条聚焦状态（遥控/键盘导航时显示描边）
   bool _searchFocused = false;
 
   // 分类浏览
@@ -115,8 +115,8 @@ class _DiscoverPageState extends State<DiscoverPage> {
 
   @override
   Widget build(BuildContext context) {
-    final wide = TvMode.useWideLayout(context);
-    // 宽屏（电视）：顶栏与搜索入口都交给侧栏，页面内容整屏可滚，
+    final wide = WideMode.useWideLayout(context);
+    // 宽屏（车机）：顶栏与搜索入口都交给侧栏，页面内容整屏可滚，
     // 分类栏随内容滚走，不再固定占住顶部。
     if (wide) {
       final cat = DiscoverSeeds.categories[_cat];

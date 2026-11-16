@@ -6,7 +6,7 @@ import '../models/book.dart';
 import '../utils/format.dart';
 import 'book_cover.dart';
 
-/// 网格列数：手机 3 列；横屏平板/电视随宽度增加（遥控器更好定位）
+/// 网格列数：手机 3 列；横屏平板/车机随宽度增加（遥控器更好定位）
 ///
 /// 车机大屏的问题正好相反：字太小、封面太大。这里用「物理宽度」判断列数
 /// （乘回界面缩放系数），放大整体界面时封面不会跟着暴涨；再叠加用户的
@@ -26,7 +26,7 @@ int bookGridColumns(BuildContext context) {
 
 /// 网格卡片：封面 + 书名 + 作者（书架/发现页通用）
 ///
-/// 遥控器/键盘聚焦时描一圈品牌色外框，TV 端能看清当前选中项。
+/// 旋钮/方向键聚焦时描一圈品牌色外框，车机上能看清当前选中项。
 class BookGridItem extends StatefulWidget {
   final Book book;
   final VoidCallback onTap;

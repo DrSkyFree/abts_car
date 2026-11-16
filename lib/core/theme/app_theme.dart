@@ -156,7 +156,7 @@ class AppTheme {
       brightness: b,
       scaffoldBackgroundColor: c.bg,
       splashFactory: InkSparkle.splashFactory,
-      // 遥控器/键盘导航时焦点需要有明显可见的底色（TV 端关键）
+      // 遥控器/键盘导航时焦点需要有明显可见的底色（遥控端关键）
       focusColor: accent.withValues(alpha: 0.25),
     );
 
@@ -227,7 +227,7 @@ class AppTheme {
             borderRadius: BorderRadius.circular(12),
           ),
         ).copyWith(
-          // TV/键盘导航聚焦时按钮明显提亮，遥控器上能看清当前按钮
+          // 旋钮/方向键导航聚焦时按钮明显提亮，车机上能看清当前按钮
           overlayColor: WidgetStateProperty.resolveWith(
             (states) => states.contains(WidgetState.focused)
                 ? Colors.white.withValues(alpha: 0.34)

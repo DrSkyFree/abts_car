@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import '../core/app_meta.dart';
 import '../core/theme/app_theme.dart';
 import '../services/browser.dart';
-import '../widgets/tv_page_scaffold.dart';
+import '../widgets/page_scaffold.dart';
 
 /// 关于我们：应用介绍 + 开源/官网快捷入口 + 免责声明
 class AboutPage extends StatelessWidget {
@@ -12,7 +12,7 @@ class AboutPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TvPageScaffold(
+    return PageScaffold(
       title: const Text('关于我们'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),

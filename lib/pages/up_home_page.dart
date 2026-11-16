@@ -10,7 +10,7 @@ import '../services/bili_api.dart';
 import '../services/umeng_analytics.dart';
 import '../utils/format.dart';
 import '../widgets/book_cover.dart';
-import '../widgets/tv_page_scaffold.dart';
+import '../widgets/page_scaffold.dart';
 import 'book_detail_page.dart';
 import 'search_page.dart';
 
@@ -145,7 +145,7 @@ class _UpHomePageState extends State<UpHomePage> {
     final following =
         context.watch<FollowStore>().isFollowing(widget.up.mid);
 
-    return TvPageScaffold(
+    return PageScaffold(
       title: Text(
         widget.up.name,
         maxLines: 1,

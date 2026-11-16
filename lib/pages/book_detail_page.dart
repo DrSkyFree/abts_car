@@ -14,7 +14,7 @@ import '../services/umeng_analytics.dart';
 import '../utils/format.dart';
 import '../widgets/acrylic_panel.dart';
 import '../widgets/book_cover.dart';
-import '../widgets/tv_page_scaffold.dart';
+import '../widgets/page_scaffold.dart';
 import 'cache_sheet.dart';
 import 'player_page.dart';
 import 'up_home_page.dart';
@@ -67,7 +67,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return TvPageScaffold(
+    return PageScaffold(
       title: const Text('书籍详情'),
       body: _loading
           ? Center(child: CircularProgressIndicator(color: AppTheme.accent))

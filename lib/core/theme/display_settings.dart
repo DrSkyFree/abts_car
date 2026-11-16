@@ -66,7 +66,7 @@ class DisplaySettings extends ChangeNotifier {
   /// 整体界面缩放：1.0 为原始尺寸
   double get scale => _scale;
 
-  /// 字号额外缩放（在系统/电视补偿之上再乘一次）
+  /// 字号额外缩放（在系统/车机补偿之上再乘一次）
   double get textScale => _textScale;
 
   /// 封面尺寸系数：>1 封面更大（每行列数更少）

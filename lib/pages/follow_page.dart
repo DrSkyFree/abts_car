@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/storage/follow_store.dart';
 import '../core/theme/app_theme.dart';
 import '../utils/format.dart';
-import '../widgets/tv_page_scaffold.dart';
+import '../widgets/page_scaffold.dart';
 import 'up_home_page.dart';
 
 /// 我关注的 UP 主（支持按名字/签名搜索）
@@ -38,7 +38,7 @@ class _FollowPageState extends State<FollowPage> {
                 u.sign.toLowerCase().contains(kw))
             .toList();
 
-    return TvPageScaffold(
+    return PageScaffold(
       title: const Text('关注的 UP 主'),
       body: Column(
         children: [

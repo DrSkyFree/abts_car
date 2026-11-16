@@ -5,7 +5,7 @@ import '../core/storage/shelf_store.dart';
 import '../core/theme/app_theme.dart';
 import '../widgets/book_cards.dart';
 import '../widgets/shelf_common.dart';
-import '../widgets/tv_page_scaffold.dart';
+import '../widgets/page_scaffold.dart';
 
 /// 我的书架：与书架同源的独立页面
 class FavoritesPage extends StatelessWidget {
@@ -15,7 +15,7 @@ class FavoritesPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final books = context.watch<ShelfStore>().books;
 
-    return TvPageScaffold(
+    return PageScaffold(
       title: const Text('我的书架'),
       actions: [
         if (books.isNotEmpty)

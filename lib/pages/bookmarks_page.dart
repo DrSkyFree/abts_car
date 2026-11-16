@@ -5,7 +5,7 @@ import '../core/storage/bookmark_store.dart';
 import '../core/theme/app_theme.dart';
 import '../player/book_player.dart';
 import '../widgets/shelf_common.dart';
-import '../widgets/tv_page_scaffold.dart';
+import '../widgets/page_scaffold.dart';
 import 'player_page.dart';
 
 /// 播放书签：集中查看所有书签，点一条直接回到当时的章节与时间点
@@ -16,7 +16,7 @@ class BookmarksPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = context.watch<BookmarkStore>().all;
 
-    return TvPageScaffold(
+    return PageScaffold(
       title: const Text('播放书签'),
       actions: [
         if (items.isNotEmpty)

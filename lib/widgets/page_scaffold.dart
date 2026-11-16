@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_theme.dart';
-import '../core/theme/tv_mode.dart';
+import '../core/theme/wide_mode.dart';
 
-/// 页面骨架：手机竖屏沿用标准 AppBar；宽屏（电视/平板/手机横屏）换成
+/// 页面骨架：手机竖屏沿用标准 AppBar；宽屏（车机/平板/手机横屏）换成
 /// 44dp 细标题栏，只保留返回、标题与操作按钮，把顶部空间还给内容。
-class TvPageScaffold extends StatelessWidget {
+class PageScaffold extends StatelessWidget {
   final Widget title;
   final List<Widget> actions;
   final Widget body;
   final Widget? floatingActionButton;
   final Color? backgroundColor;
 
-  const TvPageScaffold({
+  const PageScaffold({
     super.key,
     required this.title,
     required this.body,
@@ -23,7 +23,7 @@ class TvPageScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final wide = TvMode.useWideLayout(context);
+    final wide = WideMode.useWideLayout(context);
     if (!wide) {
       return Scaffold(
         backgroundColor: backgroundColor,

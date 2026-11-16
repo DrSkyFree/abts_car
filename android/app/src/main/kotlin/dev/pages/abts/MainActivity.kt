@@ -227,13 +227,13 @@ class MainActivity : AudioServiceActivity() {
             }
         }
 
-        // 设备形态（电视端判定：leanback 特性且无触摸屏）
+        // 设备形态（宽屏无触摸 / 方向键设备判定：车机中控、遥控盒子）
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             "abts/device",
         ).setMethodCallHandler { call, result ->
             when (call.method) {
-                "isTv" -> {
+                "isLeanback" -> {
                     try {
                         val pm = packageManager
                         val leanback =
@@ -241,7 +241,7 @@ class MainActivity : AudioServiceActivity() {
                                 pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK_ONLY)
                         val touch =
                             pm.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)
-                        // 部分盒子未声明 leanback 特性，但用方向键导航且无触摸屏，同样按 TV 对待
+                        // 部分车机盒子未声明 leanback 特性，但用方向键导航且无触摸屏，同样按宽屏对待
                         val dpad = resources.configuration.navigation ==
                             android.content.res.Configuration.NAVIGATION_DPAD
                         result.success((leanback && !touch) || (!touch && dpad))

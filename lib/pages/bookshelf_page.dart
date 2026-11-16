@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../core/storage/shelf_store.dart';
 import '../core/theme/app_theme.dart';
-import '../core/theme/tv_mode.dart';
+import '../core/theme/wide_mode.dart';
 import '../player/book_player.dart';
 import '../services/bili_api.dart';
 import '../widgets/book_cards.dart';
@@ -74,7 +74,7 @@ class _BookshelfPageState extends State<BookshelfPage> {
 
     return Scaffold(
       // 宽屏顶栏由侧栏承载（续播入口在侧栏顶部），这里不再占一行
-      appBar: TvMode.useWideLayout(context)
+      appBar: WideMode.useWideLayout(context)
           ? null
           : AppBar(
               title: const Text('书架'),
@@ -103,7 +103,7 @@ class _BookshelfPageState extends State<BookshelfPage> {
       body: books.isEmpty
           ? const EmptyShelfView()
           : GridView.builder(
-              padding: EdgeInsets.fromLTRB(12, TvMode.useWideLayout(context) ? 12 : 4, 12, 80),
+              padding: EdgeInsets.fromLTRB(12, WideMode.useWideLayout(context) ? 12 : 4, 12, 80),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: bookGridColumns(context),
                 mainAxisSpacing: 16,

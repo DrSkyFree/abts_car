@@ -5,7 +5,7 @@ import '../core/storage/follow_store.dart';
 import '../core/storage/search_history_store.dart';
 import '../core/storage/shelf_store.dart';
 import '../core/theme/app_theme.dart';
-import '../core/theme/tv_mode.dart';
+import '../core/theme/wide_mode.dart';
 import '../data/seed_books.dart';
 import '../models/book.dart';
 import '../models/up_user.dart';
@@ -14,8 +14,8 @@ import '../services/umeng_analytics.dart';
 import '../utils/format.dart';
 import '../widgets/book_cards.dart';
 import '../widgets/focus_ring.dart';
-import '../widgets/tv_letter_keyboard.dart';
-import '../widgets/tv_page_scaffold.dart';
+import '../widgets/letter_keyboard.dart';
+import '../widgets/page_scaffold.dart';
 import 'book_detail_page.dart';
 import 'up_home_page.dart';
 
@@ -60,12 +60,12 @@ class _SearchPageState extends State<SearchPage> {
   void initState() {
     super.initState();
     _scrollController.addListener(_scrollListener);
-    // 电视字母键盘直接改 controller，需要重建以更新清除按钮/结果提示
+    // 遥控字母键盘直接改 controller，需要重建以更新清除按钮/结果提示
     _controller.addListener(_onTextChanged);
     if (widget.autofocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        // 电视上不自动弹系统输入法，改用右侧字母键盘
-        if (mounted && !TvMode.isTv(context)) _focusNode.requestFocus();
+        // 车机上不自动弹系统输入法，改用右侧字母键盘
+        if (mounted && !WideMode.isLeanback(context)) _focusNode.requestFocus();
       });
     }
     if (widget.initialKeyword != null && widget.initialKeyword!.isNotEmpty) {
@@ -78,7 +78,7 @@ class _SearchPageState extends State<SearchPage> {
     if (mounted) setState(() {});
   }
 
-  /// 电视遥控器字母键盘：追加一个字符，光标放到末尾
+  /// 遥控器字母键盘：追加一个字符，光标放到末尾
   void _appendChar(String c) {
     final next = _controller.text + c;
     _controller.value = TextEditingValue(
@@ -320,11 +320,11 @@ class _SearchPageState extends State<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
-    final wide = TvMode.useWideLayout(context);
+    final wide = WideMode.useWideLayout(context);
     final mq = MediaQuery.sizeOf(context);
     // 宽屏且高度充足时才挂字母键盘，避免手机横屏 411dp 高度溢出
     final showKeyboard = wide &&
-        (TvMode.isTv(context) || (mq.width >= 960 && mq.height >= 560));
+        (WideMode.isLeanback(context) || (mq.width >= 960 && mq.height >= 560));
     final fab = _showTopButton
         ? FloatingActionButton.small(
             tooltip: '返回顶部',
@@ -347,7 +347,7 @@ class _SearchPageState extends State<SearchPage> {
 
     if (wide) {
       // 宽屏：返回/标题/关闭压进 44dp 细栏，右侧固定字母键盘供遥控器输入
-      return TvPageScaffold(
+      return PageScaffold(
         title: const Text('搜索'),
         actions: [
           IconButton(
@@ -363,7 +363,7 @@ class _SearchPageState extends State<SearchPage> {
             if (showKeyboard) ...[
               VerticalDivider(
                   width: 0.6, thickness: 0.6, color: AppTheme.divider),
-              TvLetterKeyboard(
+              LetterKeyboard(
                 onChar: _appendChar,
                 onBackspace: _backspace,
                 onClear: _clearText,
@@ -397,7 +397,8 @@ class _SearchPageState extends State<SearchPage> {
     return Padding(
       padding: EdgeInsets.fromLTRB(16, wide ? 2 : 6, 16, wide ? 8 : 12),
       child: Container(
-        height: wide ? 46 : 50,
+        // 高度随字号自适应：字号调到 180%~200% 时固定高度会把提示文字裁掉
+        constraints: BoxConstraints(minHeight: wide ? 46 : 50),
         padding: const EdgeInsets.all(2),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),

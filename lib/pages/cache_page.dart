@@ -7,7 +7,7 @@ import '../core/theme/app_theme.dart';
 import '../models/book.dart';
 import '../player/book_player.dart';
 import '../widgets/book_cover.dart';
-import '../widgets/tv_page_scaffold.dart';
+import '../widgets/page_scaffold.dart';
 import 'player_page.dart';
 
 /// 离线缓存管理：按书分组，点开看已缓存章节，可单个/批量删除、可直接播放
@@ -31,7 +31,7 @@ class CachePage extends StatelessWidget {
       ..sort((a, b) => grouped[b]!.first.cachedAt
           .compareTo(grouped[a]!.first.cachedAt));
 
-    return TvPageScaffold(
+    return PageScaffold(
       title: const Text('离线缓存'),
       actions: [
         if (all.isNotEmpty)

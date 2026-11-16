@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/display_settings.dart';
 import '../core/theme/theme_controller.dart';
-import '../widgets/tv_page_scaffold.dart';
+import '../widgets/page_scaffold.dart';
 import 'display_tuning_page.dart';
 
 /// 外观模式（独立页面）：配色模式 + 使用设备 + 屏幕缩放与边距
@@ -26,7 +26,7 @@ class ThemePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final tc = ThemeController.instance;
     final ds = DisplaySettings.instance;
-    return TvPageScaffold(
+    return PageScaffold(
       title: const Text('外观模式'),
       body: AnimatedBuilder(
         animation: Listenable.merge([tc, ds]),

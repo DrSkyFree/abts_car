@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/nav/home_tabs.dart';
 import '../core/theme/app_theme.dart';
-import '../core/theme/tv_mode.dart';
+import '../core/theme/wide_mode.dart';
 import '../services/umeng_analytics.dart';
 import '../widgets/focus_ring.dart';
 import '../widgets/mini_player.dart';
@@ -51,9 +51,9 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    // 宽屏形态（电视/平板/手机横屏）用左侧导航栏，手机竖屏保持底部导航。
+    // 宽屏形态（车机/平板/手机横屏）用左侧导航栏，手机竖屏保持底部导航。
     // 侧栏固定紧凑图标+文字宽度（约 72dp），不做扩展态，避免占掉过多横向空间
-    final wide = TvMode.useWideLayout(context);
+    final wide = WideMode.useWideLayout(context);
 
     final content = Column(
       children: [
@@ -68,7 +68,7 @@ class _HomeShellState extends State<HomeShell> {
     );
 
     if (wide) {
-      // 车机/电视的左侧导航：加宽到 118dp，图标与文字同步加大（车机上手指、
+      // 车机的左侧导航：加宽到 118dp，图标与文字同步加大（车机上手指、
       // 手套都更难精细点击）；搜索入口放在「发现」和「我的」之间，符合主驾
       // 伸手距离，也不必再滑到底部去找。
       return Scaffold(
@@ -86,7 +86,7 @@ class _HomeShellState extends State<HomeShell> {
                       height: 56,
                       child: Center(child: ShelfResumeButton(size: 46)),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 12),
                     _RailItem(
                       icon: Icons.collections_bookmark_outlined,
                       selectedIcon: Icons.collections_bookmark_rounded,
@@ -194,7 +194,7 @@ class _RailItemState extends State<_RailItem> {
     final selected = widget.selected;
     final radius = BorderRadius.circular(16);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
       child: InkWell(
         onTap: widget.onTap,
         onFocusChange: (v) {

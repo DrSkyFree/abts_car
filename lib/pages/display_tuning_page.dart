@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_theme.dart';
 import '../core/theme/display_settings.dart';
-import '../core/theme/tv_mode.dart';
-import '../widgets/tv_page_scaffold.dart';
+import '../core/theme/wide_mode.dart';
+import '../widgets/page_scaffold.dart';
 
 /// 屏幕缩放与边距调整（参考车机版常见做法）
 ///
@@ -15,7 +15,7 @@ class DisplayTuningPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ds = DisplaySettings.instance;
-    return TvPageScaffold(
+    return PageScaffold(
       title: const Text('屏幕缩放与边距调整'),
       actions: [
         TextButton(
@@ -27,7 +27,7 @@ class DisplayTuningPage extends StatelessWidget {
       body: AnimatedBuilder(
         animation: ds,
         builder: (context, _) {
-          final wide = TvMode.useWideLayout(context);
+          final wide = WideMode.useWideLayout(context);
           final scaleGroup = <Widget>[
             _Stepper(
               label: '缩放',

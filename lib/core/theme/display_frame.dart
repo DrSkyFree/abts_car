@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'display_settings.dart';
-import 'tv_mode.dart';
+import 'wide_mode.dart';
 
 /// 全局面板：把「字号缩放 / 界面缩放 / 四周边距」套到整棵组件树。
 ///
@@ -28,11 +28,11 @@ class DisplayFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
     final ds = DisplaySettings.instance;
-    final wide = TvMode.useWideLayout(context);
-    // 电视端字号补偿（车机走自己的字号设置，避免与 TV 补偿叠加）
-    final tvScaler = TvMode.textScalerFor(context);
+    final wide = WideMode.useWideLayout(context);
+    // 宽屏无触摸设备的字号补偿（车机走自己的字号设置，避免与之叠加）
+    final leanbackScaler = WideMode.textScalerFor(context);
     final textScaler = TextScaler.linear(
-      (tvScaler?.scale(1.0) ?? mq.textScaler.scale(1.0)) * ds.textScale,
+      (leanbackScaler?.scale(1.0) ?? mq.textScaler.scale(1.0)) * ds.textScale,
     );
 
     // 没有 AppBar 的宽屏页面也要保证状态栏图标与主题明暗一致

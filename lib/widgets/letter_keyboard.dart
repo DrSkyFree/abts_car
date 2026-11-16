@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
 import 'focus_ring.dart';
 
-/// 电视端字母键盘：A-Z + 0-9，配合遥控器方向键与确认键输入。
-class TvLetterKeyboard extends StatelessWidget {
+/// 遥控输入字母键盘：A-Z + 0-9，配合方向键与确认键输入。
+class LetterKeyboard extends StatelessWidget {
   final ValueChanged<String> onChar;
   final VoidCallback onBackspace;
   final VoidCallback onClear;
   final VoidCallback onSearch;
 
-  const TvLetterKeyboard({
+  const LetterKeyboard({
     super.key,
     required this.onChar,
     required this.onBackspace,

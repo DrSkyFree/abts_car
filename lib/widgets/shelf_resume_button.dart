@@ -8,7 +8,7 @@ import 'book_cover.dart';
 import 'focus_ring.dart';
 import 'shelf_common.dart';
 
-/// 书架右上角 / 电视侧栏顶部的续播按钮
+/// 书架右上角 / 车机侧栏顶部的续播按钮
 ///
 /// - 没在播：显示「上次在听」那本书的圆形封面做底，上面叠一个播放图标，
 ///   点一下继续听（走 playFromShelf，会自动续上进度）

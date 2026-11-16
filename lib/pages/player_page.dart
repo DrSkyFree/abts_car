@@ -11,7 +11,7 @@ import '../core/storage/bookmark_store.dart';
 import '../core/storage/shelf_store.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/display_settings.dart';
-import '../core/theme/tv_mode.dart';
+import '../core/theme/wide_mode.dart';
 import '../models/book.dart';
 import '../models/chapter.dart';
 import '../player/book_player.dart';
@@ -31,7 +31,7 @@ class PlayerPage extends StatefulWidget {
 class _PlayerPageState extends State<PlayerPage> {
   double _dragValue = -1;
 
-  /// 播放键是否持有遥控器/键盘焦点（TV 端画描边提示）
+  /// 播放键是否持有遥控器/键盘焦点（遥控端画描边提示）
   bool _playFocused = false;
 
   /// 提前抓住播放器引用：在 dispose() 里再 context.read 会触发
@@ -102,7 +102,7 @@ class _PlayerPageState extends State<PlayerPage> {
             ),
           ),
           // 透明 Material：让下方各 InkWell/IconButton 的焦点水波画在封面
-          // 蒙层之上，否则会被背景 Stack 的不透明图层盖住（TV 聚焦时看不见）
+          // 蒙层之上，否则会被背景 Stack 的不透明图层盖住（聚焦时看不见）
           Material(
             type: MaterialType.transparency,
             child: SafeArea(child: _buildMain(player, book, chapter)),
@@ -112,7 +112,7 @@ class _PlayerPageState extends State<PlayerPage> {
     );
   }
 
-  /// 主内容：竖屏（手机）保持单列；横屏（平板/电视）左右分栏——
+  /// 主内容：竖屏（手机）保持单列；横屏（平板/车机）左右分栏——
   /// 左侧大封面，右侧标题 + 进度 + 控制，充分利用宽幅空间。
   Widget _buildMain(BookPlayer player, Book book, Chapter? chapter) {
     return LayoutBuilder(
@@ -387,7 +387,7 @@ class _PlayerPageState extends State<PlayerPage> {
     return Padding(
       padding: dense
           ? const EdgeInsets.fromLTRB(24, 2, 24, 2)
-          : const EdgeInsets.fromLTRB(24, 8, 24, 4),
+          : const EdgeInsets.fromLTRB(24, 14, 24, 6),
       child: Column(
         children: [
           InkWell(
@@ -427,7 +427,7 @@ class _PlayerPageState extends State<PlayerPage> {
               ),
             ),
           ),
-          SizedBox(height: dense ? 3 : 6),
+          SizedBox(height: dense ? 3 : 9),
           if (chapter != null)
             Text(
               '第 ${chapter.page} 章 · ${chapter.part}',
@@ -472,7 +472,7 @@ class _PlayerPageState extends State<PlayerPage> {
     return Padding(
       padding: dense
           ? const EdgeInsets.fromLTRB(20, 2, 20, 0)
-          : const EdgeInsets.fromLTRB(20, 12, 20, 0),
+          : const EdgeInsets.fromLTRB(20, 18, 20, 0),
       child: Column(
         children: [
           SliderTheme(
@@ -526,15 +526,15 @@ class _PlayerPageState extends State<PlayerPage> {
   }
 
   Widget _buildControls(BookPlayer player, {bool dense = false}) {
-    final tv = TvMode.isTv(context);
+    final leanback = WideMode.isLeanback(context);
     // 车机按钮整体放大一档：行车中看不清、也对不准
-    final big = tv || DisplaySettings.instance.isCar;
+    final big = leanback || DisplaySettings.instance.isCar;
     final ringSize = big ? 96.0 : (dense ? 64.0 : 74.0);
     final ringIcon = big ? 56.0 : (dense ? 40.0 : 44.0);
     final side = big ? 64.0 : (dense ? 44.0 : 48.0);
     final gap = big ? 14.0 : 8.0;
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: dense ? 2 : (big ? 14 : 12)),
+      padding: EdgeInsets.symmetric(vertical: dense ? 2 : (big ? 22 : 12)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -647,8 +647,8 @@ class _PlayerPageState extends State<PlayerPage> {
     return InkResponse(
       onTap: player.togglePlay,
       radius: size / 2,
-      // TV/遥控器进入播放页时，焦点默认落在播放键上，确认键直接暂停/续播
-      autofocus: TvMode.isTv(context),
+      // 遥控器/方向键进入播放页时，焦点默认落在播放键上，确认键直接暂停/续播
+      autofocus: WideMode.isLeanback(context),
       onFocusChange: (v) {
         if (mounted) setState(() => _playFocused = v);
       },
@@ -1071,11 +1071,11 @@ class _PlayerPageState extends State<PlayerPage> {
         ),
       ),
       child: Padding(
-        padding: EdgeInsets.only(bottom: dense ? 4 : 12),
+        padding: EdgeInsets.only(bottom: dense ? 4 : 16),
         child: Wrap(
           alignment: WrapAlignment.center,
-          spacing: 10,
-          runSpacing: 8,
+          spacing: 12,
+          runSpacing: 12,
           children: [
             ActionChip(
               avatar: Icon(
