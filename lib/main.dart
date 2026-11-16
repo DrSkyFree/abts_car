@@ -16,6 +16,7 @@ import 'core/theme/app_theme.dart';
 import 'core/theme/display_frame.dart';
 import 'core/theme/display_settings.dart';
 import 'core/theme/theme_controller.dart';
+import 'core/theme/tv_mode.dart';
 import 'pages/home_shell.dart';
 import 'pages/splash_screen.dart';
 import 'player/bili_audio_handler.dart';

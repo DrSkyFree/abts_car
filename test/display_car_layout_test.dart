@@ -89,7 +89,7 @@ void main() {
       await tester.pumpWidget(
         AnimatedBuilder(
           animation: ds,
-          builder: (_, __) => MaterialApp(
+          builder: (_, _) => MaterialApp(
             // 与 main.dart 一致：整棵树套在 DisplayFrame 里
             builder: (context, child) => DisplayFrame(child: child!),
             home: Builder(
