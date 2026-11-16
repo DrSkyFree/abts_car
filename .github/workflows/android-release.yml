@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
     tags: ['v*']
+    # 文档类改动不必重新打包发布
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
   workflow_dispatch:
 
 permissions:
