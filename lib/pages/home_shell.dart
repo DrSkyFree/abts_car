@@ -192,9 +192,9 @@ class _RailItemState extends State<_RailItem> {
   @override
   Widget build(BuildContext context) {
     final selected = widget.selected;
-    final radius = BorderRadius.circular(16);
+    final radius = BorderRadius.circular(22);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
       child: InkWell(
         onTap: widget.onTap,
         onFocusChange: (v) {

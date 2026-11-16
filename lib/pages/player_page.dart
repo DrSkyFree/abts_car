@@ -162,7 +162,19 @@ class _PlayerPageState extends State<PlayerPage> {
                       },
                     ),
                   ),
-                  Expanded(flex: 5, child: _buildCover(book, maxSize: 300)),
+                  // 圆形封面：直径与左侧「标题 → 睡眠定时」整块内容等高
+                  Expanded(
+                    flex: 5,
+                    child: LayoutBuilder(
+                      builder: (context, rc) {
+                        final d = math.min(
+                          rc.maxWidth - 32,
+                          rc.maxHeight * 0.74,
+                        );
+                        return _buildCover(book, maxSize: d, circle: true);
+                      },
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -345,9 +357,14 @@ class _PlayerPageState extends State<PlayerPage> {
     );
   }
 
-  Widget _buildCover(Book book, {double maxSize = double.infinity}) {
+  Widget _buildCover(
+    Book book, {
+    double maxSize = double.infinity,
+    bool circle = false,
+  }) {
     final player = context.watch<BookPlayer>();
     final bounded = maxSize.isFinite;
+    final radius = BorderRadius.circular(circle ? maxSize / 2 : 24);
     return Center(
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: bounded ? 16 : 40),
@@ -358,24 +375,30 @@ class _PlayerPageState extends State<PlayerPage> {
           ),
           child: AspectRatio(
             aspectRatio: 1,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                BookCover(
-                  url: book.pic,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                if (player.loading)
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: Center(
-                      child: CircularProgressIndicator(color: AppTheme.accent),
-                    ),
+            child: ClipOval(
+              // 车机版右侧封面为圆形：BoxFit.cover 从四边居中裁切后套圆
+              clipBehavior: circle ? Clip.antiAlias : Clip.none,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  BookCover(
+                    url: book.pic,
+                    borderRadius: circle ? BorderRadius.zero : radius,
                   ),
-              ],
+                  if (player.loading)
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.4),
+                        borderRadius: circle ? BorderRadius.zero : radius,
+                      ),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: AppTheme.accent,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -532,9 +555,12 @@ class _PlayerPageState extends State<PlayerPage> {
     final ringSize = big ? 96.0 : (dense ? 64.0 : 74.0);
     final ringIcon = big ? 56.0 : (dense ? 40.0 : 44.0);
     final side = big ? 64.0 : (dense ? 44.0 : 48.0);
-    final gap = big ? 14.0 : 8.0;
+    final gap = big ? 24.0 : 8.0;
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: dense ? 2 : (big ? 22 : 12)),
+      // 车机：上方留白把控制键与进度条分开，下方留白把倍速等功能条再推远
+      padding: dense
+          ? const EdgeInsets.symmetric(vertical: 2)
+          : EdgeInsets.only(top: big ? 24 : 12, bottom: big ? 34 : 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -1075,7 +1101,7 @@ class _PlayerPageState extends State<PlayerPage> {
         child: Wrap(
           alignment: WrapAlignment.center,
           spacing: 12,
-          runSpacing: 12,
+          runSpacing: 16,
           children: [
             ActionChip(
               avatar: Icon(
