@@ -166,18 +166,26 @@ void main() {
       return cols;
     }
 
-    testWidgets('1920 宽：手机预设 8 列，车机预设因封面 0.85 变为 9 列', (tester) async {
+    testWidgets('1920 宽：手机预设 9 列，车机预设因封面 0.85 变为 10 列', (tester) async {
       await ds.setDevice(DeviceProfile.phone);
-      expect(await colsAt(tester, const Size(1920, 720)), 8);
-      await ds.setDevice(DeviceProfile.car);
       expect(await colsAt(tester, const Size(1920, 720)), 9);
+      await ds.setDevice(DeviceProfile.car);
+      expect(await colsAt(tester, const Size(1920, 720)), 10);
     });
 
     testWidgets('封面尺寸独立可调：调到 1.3 后同一块屏只剩 7 列', (tester) async {
       await ds.setDevice(DeviceProfile.car);
-      expect(await colsAt(tester, const Size(1920, 720)), 9);
+      expect(await colsAt(tester, const Size(1920, 720)), 10);
       await ds.setCoverScale(1.3);
       expect(await colsAt(tester, const Size(1920, 720)), 7);
+    });
+
+    // 高度兜底：屏幕更矮时靠增加列数把行高压回来，保证一屏仍能看到第二行
+    testWidgets('同一宽度下屏幕更矮时列数不减', (tester) async {
+      await ds.setDevice(DeviceProfile.phone);
+      final tall = await colsAt(tester, const Size(1600, 900));
+      final short = await colsAt(tester, const Size(1600, 600));
+      expect(short, greaterThanOrEqualTo(tall));
     });
 
     testWidgets('手机竖屏 390 宽保持 3 列', (tester) async {
