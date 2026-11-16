@@ -254,8 +254,10 @@ class _BookDetailPageState extends State<BookDetailPage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 左栏宽度随屏幕自适应：车机 1080P/2.5K 上固定 380 会让书名
+                  // 在字号放大后挤成三四行，按 28% 宽计算并夹在 360~520 之间
                   SizedBox(
-                    width: 380,
+                    width: (cons.maxWidth * 0.28).clamp(360.0, 520.0),
                     child: ListView(
                       padding: const EdgeInsets.only(bottom: 24),
                       children: [headerSection],

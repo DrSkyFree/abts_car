@@ -537,6 +537,9 @@ class _ContinueCardState extends State<_ContinueCard> {
   @override
   Widget build(BuildContext context) {
     final sb = widget.sb;
+    // 卡片宽度随字号放大，否则 200% 字号下书名只剩两三个字
+    final scale = MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.8);
+    final cardW = 110 * scale;
     return InkWell(
       onTap: () async {
         final player = context.read<BookPlayer>();
@@ -554,13 +557,13 @@ class _ContinueCardState extends State<_ContinueCard> {
         focused: _focused,
         borderRadius: BorderRadius.circular(10),
         child: SizedBox(
-          width: 110,
+          width: cardW,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Stack(
                 children: [
-                  BookCover(url: sb.book.pic, width: 110, height: 76),
+                  BookCover(url: sb.book.pic, width: cardW, height: 76),
                   Positioned(
                     bottom: 4,
                     right: 4,
@@ -594,6 +597,7 @@ class _ContinueCardState extends State<_ContinueCard> {
               Text(
                 '第 ${sb.lastChapterIndex + 1} 章 · ${sb.positionText}',
                 maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(fontSize: 11, color: AppTheme.textSub),
               ),
             ],

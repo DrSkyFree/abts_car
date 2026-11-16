@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_theme.dart';
@@ -11,17 +13,45 @@ import 'book_cover.dart';
 /// 车机大屏的问题正好相反：字太小、封面太大。这里用「物理宽度」判断列数
 /// （乘回界面缩放系数），放大整体界面时封面不会跟着暴涨；再叠加用户的
 /// 封面尺寸系数，系数越大列数越少、封面越大。
-int bookGridColumns(BuildContext context) {
+///
+/// 另外按可用高度反推一次：字号放大后卡片会被撑高，一屏只剩一行显得很空，
+/// 所以保证一屏至少露出约 1.5 行卡片（列数只增不减，有上下限兜底）。
+int bookGridColumns(BuildContext context, {double? availableHeight}) {
   final ds = DisplaySettings.instance;
-  final w = MediaQuery.sizeOf(context).width * ds.scale / ds.coverScale;
-  if (w >= 2400) return 10;
-  if (w >= 2100) return 9;
-  if (w >= 1800) return 8;
-  if (w >= 1400) return 7;
-  if (w >= 1100) return 6;
-  if (w >= 900) return 5;
-  if (w >= 640) return 4;
-  return 3;
+  final size = MediaQuery.sizeOf(context);
+  final w = size.width * ds.scale / ds.coverScale;
+
+  int cols;
+  if (w >= 2400) {
+    cols = 10;
+  } else if (w >= 2100) {
+    cols = 9;
+  } else if (w >= 1800) {
+    cols = 8;
+  } else if (w >= 1400) {
+    cols = 7;
+  } else if (w >= 1100) {
+    cols = 6;
+  } else if (w >= 900) {
+    cols = 5;
+  } else if (w >= 640) {
+    cols = 4;
+  } else {
+    cols = 3;
+  }
+
+  // 高度兜底：gridHeight 为网格可见高度（不含页面其他元素时的保守估计）
+  const spacing = 12.0;
+  const aspect = 0.55; // 与 GridView 的 childAspectRatio 保持一致
+  final gridH = availableHeight ?? (size.height - 190);
+  if (gridH > 160) {
+    final usable = w - 32;
+    final targetCardH = gridH / 1.55;
+    final targetCardW = targetCardH * aspect;
+    final byHeight = ((usable + spacing) / (targetCardW + spacing)).floor();
+    cols = math.max(cols, byHeight);
+  }
+  return cols.clamp(3, 10);
 }
 
 /// 网格卡片：封面 + 书名 + 作者（书架/发现页通用）
