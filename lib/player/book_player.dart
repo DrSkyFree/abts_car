@@ -84,6 +84,8 @@ class BookPlayer extends ChangeNotifier {
   Duration _lastPos = Duration.zero;
   DateTime _lastPosAt = DateTime.now();
   bool _reconnecting = false;
+  /// 正在执行 stop()：语音/通知栏可能重复下发停止指令
+  bool _stopping = false;
 
   /// 播完本集自动暂停（小宇宙同款）：到结尾停下而不是连播下一章
   bool _stopAtChapterEnd = false;
@@ -1097,12 +1099,20 @@ class BookPlayer extends ChangeNotifier {
   }
 
   Future<void> stop() async {
+    // 语音/通知栏的「停止」可能先后触发两次：第二次进来时播放器已停在 0，
+    // 再存一次进度就会把刚保存的位置覆盖成 0，所以这里既做幂等也只在有音源时存
+    if (_stopping) return;
+    _stopping = true;
     _pausedByInterruption = false;
-    // 先留存进度：语音「停止播放」会走到这里，不留的话下次「开始播放」就找不到位置
-    flushProgress();
+    // 先留存进度：此时播放器还没停，位置有效
+    if (_loaded) flushProgress();
     // 会话代号自增：让进行中的重连立即作废，避免「按了停止声音又出来」
     _session++;
-    await _player.stop();
+    try {
+      await _player.stop();
+    } catch (e) {
+      debugPrint('[BookPlayer] stop failed: $e');
+    }
     unawaited(AudioFocus.instance.abandon());
     _loaded = false;
     _playbackUrl = null;
@@ -1124,6 +1134,7 @@ class BookPlayer extends ChangeNotifier {
         ),
       );
     }
+    _stopping = false;
     notifyListeners();
   }
 
@@ -1333,6 +1344,9 @@ class BookPlayer extends ChangeNotifier {
   }
 
   void _saveNow() {
+    // 没有音源时不落库：停止后播放器位置会归零，若此时再保存，
+    // 会把停止前刚存好的进度覆盖成 0，语音「开始播放」就只能从头听
+    if (!_loaded) return;
     if (_loading) return; // 切章过程中不落库，避免记录错章节
     final chapter = currentChapter;
     final book = _book;
