@@ -2,32 +2,22 @@ import 'package:dio/dio.dart';
 
 import '../core/app_meta.dart';
 
-/// 检查更新：数据源走 GitHub Releases
+/// 检查更新：只在用户手动点击时请求 GitHub Releases，不做后台自动检查。
 ///
-/// 发布后把下面两个常量改成你的仓库即可，例如：
-/// ```dart
-/// static const githubOwner = 'your-name';
-/// static const githubRepo = 'abts';
-/// ```
+/// 应用内不下载、不安装，只展示版本号与发布日期，引导用户到仓库手动下载。
 class UpdateResult {
   const UpdateResult({
     required this.configured,
     this.error,
     this.latestVersion,
-    this.latestName,
-    this.changelog,
-    this.htmlUrl,
-    this.apkUrl,
+    this.publishedAt,
   });
 
   /// 是否已配置 GitHub 仓库（未配置时不会发起请求）
   final bool configured;
   final String? error;
   final String? latestVersion;
-  final String? latestName;
-  final String? changelog;
-  final String? htmlUrl;
-  final String? apkUrl;
+  final DateTime? publishedAt;
 
   bool get hasNewer {
     if (!configured) return false;
@@ -60,11 +50,12 @@ class AppUpdate {
 
   static bool get configured => githubOwner.isNotEmpty && githubRepo.isNotEmpty;
 
+  /// 仓库 Releases 页面：用户手动下载安装包
+  static String get releasesUrl =>
+      'https://github.com/$githubOwner/$githubRepo/releases';
+
   static String get _apiUrl =>
       'https://api.github.com/repos/$githubOwner/$githubRepo/releases/latest';
-
-  static String get _downloadBase =>
-      'https://github.com/$githubOwner/$githubRepo/releases/latest';
 
   /// 检查最新版本。
   ///
@@ -82,27 +73,15 @@ class AppUpdate {
         ),
       );
       final data = resp.data as Map? ?? {};
-      String? apkUrl;
-      final assets = data['assets'] as List? ?? const [];
-      for (final a in assets) {
-        final m = a as Map?;
-        final name = '${m?['name'] ?? ''}';
-        if (name.endsWith('.apk')) {
-          apkUrl = '${m?['browser_download_url'] ?? ''}';
-          break;
-        }
-      }
       final tag = '${data['tag_name'] ?? ''}';
+      final published = DateTime.tryParse('${data['published_at'] ?? ''}');
       return UpdateResult(
         configured: true,
         latestVersion: tag.isEmpty ? null : tag.replaceFirst(RegExp(r'^v'), ''),
-        latestName: '${data['name'] ?? ''}',
-        changelog: '${data['body'] ?? ''}'.trim(),
-        htmlUrl: '${data['html_url'] ?? _downloadBase}',
-        apkUrl: apkUrl?.isEmpty == true ? null : apkUrl,
+        publishedAt: published?.toLocal(),
       );
     } catch (e) {
-      return UpdateResult(configured: true, error: '检查更新失败，请稍后重试');
+      return const UpdateResult(configured: true, error: '检查更新失败，请稍后重试');
     }
   }
 }

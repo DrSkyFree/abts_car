@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
 import '../core/storage/cache_store.dart';
@@ -25,11 +28,16 @@ class _SettingsPageState extends State<SettingsPage> {
   String _cachePath = '';
   String _cacheFree = '';
 
+  /// 应用缓存（图片 / 临时文件）占用与清理状态
+  int _appCacheBytes = 0;
+  bool _clearingCache = false;
+
   @override
   void initState() {
     super.initState();
     _refresh();
     _refreshCacheInfo();
+    _refreshAppCache();
   }
 
   Future<void> _refresh() async {
@@ -61,9 +69,105 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   static String _fmtBytes(int bytes) {
-    final gb = bytes / 1024 / 1024 / 1024;
-    if (gb >= 1) return '${gb.toStringAsFixed(1)} GB';
-    return '${(bytes / 1024 / 1024).toStringAsFixed(0)} MB';
+    if (bytes >= 1024 * 1024 * 1024) {
+      return '${(bytes / 1024 / 1024 / 1024).toStringAsFixed(1)} GB';
+    }
+    if (bytes >= 1024 * 1024) {
+      return '${(bytes / 1024 / 1024).toStringAsFixed(1)} MB';
+    }
+    if (bytes >= 1024) return '${(bytes / 1024).round()} KB';
+    return '$bytes B';
+  }
+
+  /// 统计应用缓存（图片 / 临时文件）占用
+  Future<void> _refreshAppCache() async {
+    final bytes = await _cacheDirSize();
+    if (!mounted) return;
+    setState(() => _appCacheBytes = bytes);
+  }
+
+  Future<int> _cacheDirSize() async {
+    try {
+      final dir = await getTemporaryDirectory();
+      return await _dirSize(dir);
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  Future<int> _dirSize(Directory dir) async {
+    var total = 0;
+    try {
+      await for (final e in dir.list(recursive: true, followLinks: false)) {
+        if (e is File) {
+          try {
+            total += await e.length();
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+    return total;
+  }
+
+  /// 清理应用缓存：只删图片与临时文件，不动离线缓存、书架与播放进度
+  Future<void> _clearAppCache() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: Text('清理应用缓存',
+            style: TextStyle(color: AppTheme.textMain, fontSize: 17)),
+        content: Text(
+          '将清理封面图片与临时文件，可释放约 ${_fmtBytes(_appCacheBytes)}。\n'
+          '离线缓存、书架与播放进度不会被删除。\n'
+          '正在播放时清理可能短暂影响当前音频。',
+          style: TextStyle(color: AppTheme.textSub, fontSize: 13, height: 1.6),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('取消', style: TextStyle(color: AppTheme.textSub)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text('清理', style: TextStyle(color: AppTheme.accent)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _clearingCache = true);
+    // 先清内存里的图片缓存，再删磁盘文件
+    PaintingBinding.instance.imageCache
+      ..clear()
+      ..clearLiveImages();
+    var cleared = 0;
+    try {
+      final dir = await getTemporaryDirectory();
+      await for (final e in dir.list(followLinks: false)) {
+        try {
+          if (e is File) {
+            cleared += await e.length();
+            await e.delete();
+          } else if (e is Directory) {
+            cleared += await _dirSize(e);
+            await e.delete(recursive: true);
+          }
+        } catch (_) {
+          // 个别文件正被占用，跳过即可
+        }
+      }
+    } catch (_) {}
+    if (!mounted) return;
+    setState(() => _clearingCache = false);
+    await _refreshAppCache();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(cleared > 0 ? '已清理 ${_fmtBytes(cleared)}' : '缓存已是最干净状态'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   /// 选择缓存位置（内部存储 / 外部存储·SD 卡）
@@ -289,6 +393,24 @@ class _SettingsPageState extends State<SettingsPage> {
             trailing: Icon(Icons.chevron_right_rounded,
                 color: AppTheme.textHint),
             onTap: _pickCacheLocation,
+          ),
+          ListTile(
+            leading: Icon(Icons.cleaning_services_outlined,
+                color: AppTheme.accent),
+            title: Text(
+              '清理应用缓存',
+              style: TextStyle(fontSize: 14, color: AppTheme.textMain),
+            ),
+            subtitle: Text(
+              _clearingCache
+                  ? '正在清理…'
+                  : '图片与临时文件 · ${_fmtBytes(_appCacheBytes)}\n'
+                      '不影响离线缓存、书架与播放进度',
+              style: TextStyle(fontSize: 12, color: AppTheme.textSub),
+            ),
+            trailing: Icon(Icons.chevron_right_rounded,
+                color: AppTheme.textHint),
+            onTap: _clearingCache ? null : _clearAppCache,
           ),
         ],
       ),
