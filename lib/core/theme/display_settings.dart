@@ -67,14 +67,6 @@ class DisplaySettings extends ChangeNotifier {
         viewport.height * _marginBottom / 100,
       );
 
-  bool get hasTuning =>
-      _scale != 1.0 ||
-      _textScale != 1.0 ||
-      _marginTop != 0 ||
-      _marginBottom != 0 ||
-      _marginLeft != 0 ||
-      _marginRight != 0;
-
   Future<void> load() async {
     final sp = await SharedPreferences.getInstance();
     _scale = sp.getDouble(_kScale) ?? defaultScale;
