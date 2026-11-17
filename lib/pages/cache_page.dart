@@ -183,6 +183,11 @@ class CachePage extends StatelessWidget {
                   '占用 ${cache.totalSizeText} · 点击书籍查看已缓存章节',
                   style: TextStyle(fontSize: 12, color: AppTheme.textSub),
                 ),
+                const SizedBox(height: 2),
+                Text(
+                  '仅本应用内播放 · 有效期 ${CacheStore.ttl.inDays} 天，到期自动清理 · 不提供导出与分享',
+                  style: TextStyle(fontSize: 11.5, color: AppTheme.textHint),
+                ),
               ],
             ),
           ),

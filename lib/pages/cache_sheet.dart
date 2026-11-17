@@ -109,8 +109,8 @@ class _CacheSheetState extends State<CacheSheet> {
     if (!mounted) return;
     setState(() => _running = false);
     final msg = already > 0
-        ? '已开始后台缓存 ${items.length} 集（$already 集已缓存）'
-        : '已开始后台缓存 ${items.length} 集';
+        ? '已开始后台缓存 ${items.length} 集（$already 集已缓存）· 仅应用内播放'
+        : '已开始后台缓存 ${items.length} 集 · 仅应用内播放';
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
     );
@@ -160,7 +160,8 @@ class _CacheSheetState extends State<CacheSheet> {
             child: Text(
               '${book.cleanTitle} · 共 ${chapters.length} 集\n'
               '已缓存 ${cache.countOf(bvid)} 集 · 占用 ${cache.totalSizeText} · '
-              '缓存有效期 ${CacheStore.ttl.inDays} 天',
+              '缓存有效期 ${CacheStore.ttl.inDays} 天\n'
+              '仅本应用内播放，不提供导出与分享',
               style: TextStyle(fontSize: 12, color: AppTheme.textSub),
             ),
           ),
