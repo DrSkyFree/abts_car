@@ -22,7 +22,7 @@ CI 会执行 `flutter analyze`（阻断）与 `flutter test`，提交前务必�
 
 ## 显示系统（车机适配核心）
 
-- `lib/core/theme/display_settings.dart`：单例 `DisplaySettings.instance`，保存「使用设备 / 界面缩放 / 字号 / 封面系数 / 四周边距」，落 SharedPreferences
+- `lib/core/theme/display_settings.dart`：单例 `DisplaySettings.instance`，保存「界面缩放 / 字号 / 封面系数 / 四周边距」，落 SharedPreferences；**只做车机**，不再有手机/平板预设（默认字号 1.3、封面 0.85、上边距 7%）
 - `lib/core/theme/display_frame.dart`：`MaterialApp.builder` 里的全局面板，用「缩小逻辑视口 + 等比放大」实现整体缩放，并按百分比补顶部留白
 - `lib/core/theme/wide_mode.dart`：宽屏/遥控设备判定（`useWideLayout`、`isLeanback`、`textScalerFor`）
 - 相关页面：`pages/theme_page.dart`（外观模式）、`pages/display_tuning_page.dart`（缩放与边距）

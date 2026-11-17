@@ -6,7 +6,7 @@ import '../core/theme/theme_controller.dart';
 import '../widgets/page_scaffold.dart';
 import 'display_tuning_page.dart';
 
-/// 外观模式（独立页面）：配色模式 + 使用设备 + 屏幕缩放与边距
+/// 外观模式（独立页面）：配色模式 + 屏幕缩放与边距
 class ThemePage extends StatelessWidget {
   const ThemePage({super.key});
 
@@ -74,44 +74,6 @@ class ThemePage extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
-              _sectionTitle('使用设备'),
-              RadioGroup<DeviceProfile>(
-                groupValue: ds.device,
-                onChanged: (v) {
-                  if (v != null) _pickDevice(context, v);
-                },
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (final d in DeviceProfile.values)
-                      RadioListTile<DeviceProfile>(
-                        value: d,
-                        activeColor: AppTheme.accent,
-                        secondary: Icon(
-                          d == DeviceProfile.car
-                              ? Icons.directions_car_filled_rounded
-                              : Icons.smartphone_rounded,
-                          color: AppTheme.textSub,
-                        ),
-                        title: Text(
-                          d.label,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: AppTheme.textMain,
-                          ),
-                        ),
-                        subtitle: Text(
-                          d.desc,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.textHint,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
               const SizedBox(height: 12),
               _sectionTitle('屏幕'),
               ListTile(
@@ -140,55 +102,6 @@ class ThemePage extends StatelessWidget {
         },
       ),
     );
-  }
-
-  /// 切换使用设备：选车机时确认后自动关闭并重启应用
-  Future<void> _pickDevice(BuildContext context, DeviceProfile d) async {
-    final ds = DisplaySettings.instance;
-    if (ds.device == d) return;
-    final messenger = ScaffoldMessenger.of(context);
-    if (d == DeviceProfile.car) {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: AppTheme.surface,
-          title: Text(
-            '切换到车机模式',
-            style: TextStyle(color: AppTheme.textMain, fontSize: 17),
-          ),
-          content: Text(
-            '将套用车机布局：宽屏侧栏、字号放大、封面缩小，并自动避开顶部状态栏。\n\n'
-            '切换后应用会自动关闭并重启，播放会中断。',
-            style: TextStyle(
-              color: AppTheme.textSub,
-              fontSize: 13,
-              height: 1.6,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text('取消', style: TextStyle(color: AppTheme.textSub)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text(
-                '切换并重启',
-                style: TextStyle(color: AppTheme.accent),
-              ),
-            ),
-          ],
-        ),
-      );
-      if (ok != true) return;
-      await ds.setDevice(DeviceProfile.car);
-      messenger.showSnackBar(const SnackBar(content: Text('正在重启以套用车机布局…')));
-      await ds.restartApp();
-      return;
-    }
-    await ds.setDevice(DeviceProfile.phone);
-    if (!context.mounted) return;
-    messenger.showSnackBar(const SnackBar(content: Text('已切回手机布局')));
   }
 
   String _summary(DisplaySettings ds) {

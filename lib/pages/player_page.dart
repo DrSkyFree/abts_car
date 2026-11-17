@@ -10,7 +10,6 @@ import '../core/network/api_config.dart';
 import '../core/storage/bookmark_store.dart';
 import '../core/storage/shelf_store.dart';
 import '../core/theme/app_theme.dart';
-import '../core/theme/display_settings.dart';
 import '../core/theme/wide_mode.dart';
 import '../models/book.dart';
 import '../models/chapter.dart';
@@ -571,18 +570,16 @@ class _PlayerPageState extends State<PlayerPage> {
   }
 
   Widget _buildControls(BookPlayer player, {bool dense = false}) {
-    final leanback = WideMode.isLeanback(context);
     // 车机按钮整体放大一档：行车中看不清、也对不准
-    final big = leanback || DisplaySettings.instance.isCar;
-    final ringSize = big ? 96.0 : (dense ? 64.0 : 74.0);
-    final ringIcon = big ? 56.0 : (dense ? 40.0 : 44.0);
-    final side = big ? 64.0 : (dense ? 44.0 : 48.0);
-    final gap = big ? 24.0 : 8.0;
+    const ringSize = 96.0;
+    const ringIcon = 56.0;
+    const side = 64.0;
+    const gap = 24.0;
     return Padding(
       // 车机：上方留白把控制键与进度条分开，下方留白把倍速等功能条再推远
       padding: dense
           ? const EdgeInsets.symmetric(vertical: 2)
-          : EdgeInsets.only(top: big ? 24 : 12, bottom: big ? 46 : 12),
+          : const EdgeInsets.only(top: 24, bottom: 46),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [

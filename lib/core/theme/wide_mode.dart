@@ -3,15 +3,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'display_settings.dart';
-
 /// 宽屏 / 遥控操作设备的判定与显示补偿。
 ///
-/// 车机中控常见「宽屏 + 无触摸或仅旋钮操作」的形态：判定优先走原生探测
-/// （leanback 特性或无触摸屏 + 方向键，见 MainActivity 的 `abts/device` 通道），
-/// 失败时回退到「方向键导航 + 大屏」启发式。
-/// 这类设备常见 1920x720 ~ 2560x1440 逻辑分辨率，默认字号偏小，这里统一加
-/// 一次温和的字号补偿；触摸车机则由「屏幕缩放与边距调整」里的字号设置精确控制。
+/// 本应用只面向车机中控：布局一律按「宽屏 + 侧栏」处理，不再区分手机/平板。
+/// 焦点描边与遥控输入相关的判定仍保留（车机可能只有旋钮/方向盘按键），
+/// 原生探测见 MainActivity 的 `abts/device` 通道，失败时回退到启发式。
 class WideMode {
   WideMode._();
 
@@ -46,28 +42,10 @@ class WideMode {
         mq.size.shortestSide >= 540;
   }
 
-  /// 是否采用「宽屏形态」：车机/平板（短边 ≥ 600dp），或手机横屏
-  /// （宽 ≥ 640dp 且横向）。主框架据此把底部导航换成左侧栏，播放页/详情页
-  /// 据此切左右分栏；与方向键导航模式共用同一口径（见 main.dart）。
-  static bool useWideLayout(BuildContext context) {
-    // 车机：中控一律按宽屏侧栏布局（方向键/触屏都够用）
-    if (DisplaySettings.instance.isCar) return true;
-    if (isLeanback(context)) return true;
-    final size = MediaQuery.sizeOf(context);
-    if (size.shortestSide >= 600) return true;
-    return size.width > size.height && size.width >= 640;
-  }
+  /// 是否采用「宽屏形态」：车机一律为宽屏侧栏布局。
+  static bool useWideLayout(BuildContext context) => true;
 
-  /// 无触摸宽屏设备的字号补偿（触摸车机返回 null，交给字号设置处理）。
-  ///
-  /// 车机不在这里放大：车机字号由「屏幕缩放与边距调整」里的字号设置控制，
+  /// 车机不再做额外字号补偿：字号统一由「屏幕缩放与边距调整」控制，
   /// 两处叠加会把字放得过大。
-  static TextScaler? textScalerFor(BuildContext context) {
-    if (DisplaySettings.instance.isCar) return null;
-    if (!isLeanback(context)) return null;
-    final mq = MediaQuery.of(context);
-    final base = mq.textScaler.scale(1.0);
-    final factor = mq.devicePixelRatio < 1.4 ? 1.3 : 1.15;
-    return TextScaler.linear((base * factor).clamp(1.0, 2.0));
-  }
+  static TextScaler? textScalerFor(BuildContext context) => null;
 }
