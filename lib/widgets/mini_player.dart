@@ -59,9 +59,12 @@ class _MiniPlayerState extends State<MiniPlayer>
           decoration: BoxDecoration(
             border: Border(top: BorderSide(color: AppTheme.divider)),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.fromLTRB(12, 10, 14, 10),
           child: Row(
             children: [
+              // 主驾在左：播放/暂停放最左侧，伸手就能按到
+              _buildButton(player),
+              const SizedBox(width: 12),
               _buildDisc(player, playing),
               const SizedBox(width: 12),
               Expanded(
@@ -74,22 +77,32 @@ class _MiniPlayerState extends State<MiniPlayer>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 14.5,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.textMain,
                       ),
                     ),
-                    if (chapter != null)
+                    if (chapter != null) ...[
+                      const SizedBox(height: 2),
                       Text(
                         '第 ${chapter.page} 章 · ${chapter.part}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 11, color: AppTheme.textSub),
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: AppTheme.textMain.withValues(alpha: 0.7),
+                        ),
                       ),
+                    ],
                   ],
                 ),
               ),
-              _buildButton(player),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.keyboard_arrow_up_rounded,
+                size: 26,
+                color: AppTheme.textHint,
+              ),
             ],
           ),
         ),
@@ -100,8 +113,8 @@ class _MiniPlayerState extends State<MiniPlayer>
   /// 左侧旋转唱片：播放时持续旋转，暂停时停在当前角度并叠加播放图标
   Widget _buildDisc(BookPlayer player, bool playing) {
     return SizedBox(
-      width: 44,
-      height: 44,
+      width: 48,
+      height: 48,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -110,9 +123,9 @@ class _MiniPlayerState extends State<MiniPlayer>
             child: ClipOval(
               child: BookCover(
                 url: player.book!.pic,
-                width: 44,
-                height: 44,
-                borderRadius: BorderRadius.circular(22),
+                width: 48,
+                height: 48,
+                borderRadius: BorderRadius.circular(24),
               ),
             ),
           ),
@@ -125,7 +138,7 @@ class _MiniPlayerState extends State<MiniPlayer>
               child: const Icon(
                 Icons.play_arrow_rounded,
                 color: Colors.white,
-                size: 22,
+                size: 24,
               ),
             ),
         ],
@@ -133,32 +146,52 @@ class _MiniPlayerState extends State<MiniPlayer>
     );
   }
 
+  /// 播放/暂停：强调色实心圆按钮，位于最左侧，车机上易辨认、易点中
   Widget _buildButton(BookPlayer player) {
-    if (player.loading) {
-      return const SizedBox(
-        width: 44,
-        height: 44,
-        child: Center(
-          child: SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.2,
-              color: AppTheme.accent,
+    final loading = player.loading;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: loading ? null : player.togglePlay,
+        child: Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppTheme.accent,
+                Color.lerp(AppTheme.accent, Colors.black, 0.26)!,
+              ],
             ),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.accent.withValues(alpha: 0.40),
+                blurRadius: 18,
+                offset: const Offset(0, 5),
+              ),
+            ],
           ),
+          child: loading
+              ? const Padding(
+                  padding: EdgeInsets.all(19),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.4,
+                    color: Colors.white,
+                  ),
+                )
+              : Icon(
+                  player.isPlaying
+                      ? Icons.pause_rounded
+                      : Icons.play_arrow_rounded,
+                  color: Colors.white,
+                  size: 34,
+                ),
         ),
-      );
-    }
-    final enabled = player.loaded;
-    return IconButton(
-      onPressed: enabled ? player.togglePlay : null,
-      icon: Icon(
-        player.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
-        color: enabled ? AppTheme.accent : AppTheme.textHint,
-        size: 32,
       ),
-      tooltip: player.isPlaying ? '暂停' : '播放',
     );
   }
 }

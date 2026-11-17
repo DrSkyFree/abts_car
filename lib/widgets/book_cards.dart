@@ -118,10 +118,19 @@ class _BookGridItemState extends State<BookGridItem> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: 13,
-                height: 1.3,
-                fontWeight: FontWeight.w500,
+                fontSize: 14,
+                height: 1.25,
+                fontWeight: FontWeight.w600,
                 color: AppTheme.textMain,
+                // 深色/浅色主题下都压一层极淡的阴影，保证在壁纸、渐变底上也能看清
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withValues(
+                      alpha: AppTheme.isDark ? 0.5 : 0.14,
+                    ),
+                    blurRadius: 3,
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 4),
@@ -129,7 +138,11 @@ class _BookGridItemState extends State<BookGridItem> {
               book.author,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 11, color: AppTheme.textSub),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.textMain.withValues(alpha: 0.72),
+              ),
             ),
           ],
         ),
