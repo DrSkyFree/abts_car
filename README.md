@@ -27,25 +27,20 @@ Android 7.0+ · 宽屏侧栏 · 大按钮触控 · 永久免费 · 开源
 
 ## 界面预览
 
-以下截图均为 **1920×720 车机模拟器实拍**，使用车机预设：缩放 100% · 字号 130% · 封面 85% · 上边距 7%。
+> 为避免出现第三方内容，以下截图使用**虚构示例数据**：书名、主播名均为演示虚构，封面为占位图，不含任何真实作品或用户信息，仅用于说明车机版界面布局。
+> 均为 1920×720 车机模拟器实拍，车机预设：缩放 100% · 字号 130% · 封面 85% · 上边距 7%。
 
-**发现页（浅色 / 深色）**
+**书架（虚构示例书籍）**
 
-![发现页 浅色](docs/screenshots/car/discover-light.jpg)
-![发现页 深色](docs/screenshots/car/discover-dark.jpg)
+![书架](docs/screenshots/car/shelf.jpg)
 
-**正在播放（左操作 / 右圆形封面）**
-
-![播放页 浅色](docs/screenshots/car/player-light.jpg)
-![播放页 深色](docs/screenshots/car/player-dark.jpg)
-
-**书籍详情 + 亚克力浮动播放器**
-
-![详情页](docs/screenshots/car/detail.jpg)
-
-**迷你播放条（播放键在主驾侧）+ 我的**
+**我的 · 继续收听**
 
 ![我的](docs/screenshots/car/my.jpg)
+
+**搜索（右侧字母键盘 + 热门分类）**
+
+![搜索](docs/screenshots/car/search.jpg)
 
 **车机专有显示设置**
 
