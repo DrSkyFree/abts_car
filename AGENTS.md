@@ -35,10 +35,10 @@ CI 会执行 `flutter analyze`（阻断）与 `flutter test`，提交前务必�
 
 1. `flutter analyze` → `flutter test` → 构建 4 个 APK（split-per-abi + universal）
 2. 重命名为 `abts_car-v{版本}-{abi}.apk`
-3. 发布 Release，并**删除除本次以外的所有历史 Release**
+3. 发布 Release，**历史 Release 全部保留**：每个版本的「本次更新」就是该版本的更新日志（README 不再维护更新日志）
 4. 版本号来源：`pubspec.yaml` 的 `version`，需与 `lib/core/app_meta.dart` 的 `version` 保持一致（「检查更新」依赖它）
 
-发布前流程：改版本 → 更新 README 更新日志（只写最新版本条目）→ commit → push → 等 CI → 装模拟器验证。
+发布前流程：改版本 → 在工作流 `Publish GitHub Release` 的 body 里写好本次更新 → commit → push → 等 CI → 装模拟器验证。
 
 ## 本地验证环境
 

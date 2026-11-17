@@ -90,7 +90,7 @@ jobs:
           tag_name: v${{ steps.ver.outputs.version }}
           name: 阿B听书 v${{ steps.ver.outputs.version }}
           body: |
-            ## 车机专用版 v1.4.11
+            ## 车机专用版 v${{ steps.ver.outputs.version }}
 
             本仓库为「阿B听书」车机专用分支，只适配 Android 车机中控。
 
@@ -121,15 +121,4 @@ jobs:
           files: build/app/outputs/flutter-apk/*.apk
           fail_on_unmatched_files: true
 
-      # 只保留最新一个 Release：发布成功后清掉历史版本与其 tag
-      - name: Delete older releases
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG="v${{ steps.ver.outputs.version }}"
-          gh release list --limit 100 --json tagName -q '.[].tagName' | while read -r t; do
-            if [ -n "$t" ] && [ "$t" != "$TAG" ]; then
-              echo "delete old release: $t"
-              gh release delete "$t" --yes --cleanup-tag || true
-            fi
-          done
+      # 历史 Release 全部保留：每次发布的「本次更新」即该版本的更新日志
