@@ -156,7 +156,10 @@ class _AbTingShuAppState extends State<AbTingShuApp>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _splashWatchdog = Timer(const Duration(seconds: 6), _enterHome);
-    _bootstrap().whenComplete(_enterHome);
+    _bootstrap().catchError((Object e) {
+      // 启动阶段任何异常都不能让界面停在启动页，交给看门狗兜底
+      debugPrint('[main] bootstrap failed: $e');
+    }).whenComplete(_enterHome);
   }
 
   /// 进入主界面：初始化完成与看门狗谁先到算谁，重复调用无害。
