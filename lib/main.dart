@@ -27,16 +27,37 @@ import 'services/umeng_analytics.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // 宽屏/遥控设备优先：强制「传统」焦点高亮模式。
-  // 默认自动模式依赖设备上报输入类型，部分安卓车机盒不触发切换，
-  // 会导致旋钮/方向键聚焦时按钮自带高亮不显示；聚焦态才绘制，手机端无副作用。
-  FocusManager.instance.highlightStrategy =
-      FocusHighlightStrategy.alwaysTraditional;
-  MediaKit.ensureInitialized();
-  await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+  // 注意：runApp 之前任何一步抛异常或卡住，系统都会一直停在原生启动图
+  // （深空蓝底 + LOGO）上，只能杀进程重进。因此这里逐项 try/catch，
+  // 并且不再 await 平台通道调用。
+  try {
+    // 宽屏/遥控设备优先：强制「传统」焦点高亮模式。
+    // 默认自动模式依赖设备上报输入类型，部分安卓车机盒不触发切换，
+    // 会导致旋钮/方向键聚焦时按钮自带高亮不显示；聚焦态才绘制，手机端无副作用。
+    FocusManager.instance.highlightStrategy =
+        FocusHighlightStrategy.alwaysTraditional;
+  } catch (e) {
+    debugPrint('[main] focus strategy init failed: $e');
+  }
+  try {
+    // 加载 libmpv；个别车机在低内存时可能失败，失败也不该挡住界面
+    MediaKit.ensureInitialized();
+  } catch (e) {
+    debugPrint('[main] media_kit init failed: $e');
+  }
 
   // 立即渲染启动页（LOGO + 加载动画），初始化在启动页展示期间执行，避免白屏
   runApp(const AbTingShuApp());
+
+  // 方向锁放到首帧之后再发：部分车机的窗口管理平台通道偶发无响应，
+  // 在 runApp 之前 await 会让首帧永远出不来，表现为卡在启动图。
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    SystemChrome.setPreferredOrientations(DeviceOrientation.values)
+        .timeout(const Duration(seconds: 3))
+        .catchError((Object e) {
+          debugPrint('[main] set orientations failed: $e');
+        });
+  });
 }
 
 /// 第一阶段：启动关键初始化。
@@ -72,6 +93,15 @@ Future<void> _bootstrap() async {
     resolver: (bvid, cid) => player.resolveUrlFor(bvid, cid),
     headers: player.downloadHeaders,
   );
+  // 媒体会话放后台：这项工作要绑定前台服务，个别车机上绑定回调可能很慢，
+  // 不该让它拖着启动页。BookPlayer 内部对 handler 为空已做兼容。
+  unawaited(_initAudioService());
+}
+
+/// 绑定系统媒体会话（通知栏 / 方向盘按键 / 锁屏控制）。
+///
+/// 与启动流程解耦：即使失败或超时，界面照常可用，播放退化为应用内控制。
+Future<void> _initAudioService() async {
   try {
     final handler = await AudioService.init(
       builder: () => BiliAudioHandler(),
@@ -86,8 +116,8 @@ Future<void> _bootstrap() async {
         androidStopForegroundOnPause: false,
         androidNotificationClickStartsActivity: true,
       ),
-    ).timeout(const Duration(seconds: 6));
-    player.attachHandler(handler);
+    ).timeout(const Duration(seconds: 8));
+    BookPlayer.instance.attachHandler(handler);
   } catch (e) {
     debugPrint('[main] audio service init failed: $e');
   }
@@ -117,19 +147,30 @@ class _AbTingShuAppState extends State<AbTingShuApp>
     with WidgetsBindingObserver {
   bool _ready = false;
 
+  /// 启动兜底：初始化万一卡在某个慢平台通道上（车机偶发），
+  /// 也不能让用户永远停在启动页，超时后直接进主界面。
+  Timer? _splashWatchdog;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _bootstrap().whenComplete(() {
-      if (!mounted) return;
-      setState(() => _ready = true);
-      _bootstrapBackground();
-    });
+    _splashWatchdog = Timer(const Duration(seconds: 6), _enterHome);
+    _bootstrap().whenComplete(_enterHome);
+  }
+
+  /// 进入主界面：初始化完成与看门狗谁先到算谁，重复调用无害。
+  void _enterHome() {
+    if (!mounted || _ready) return;
+    _splashWatchdog?.cancel();
+    _splashWatchdog = null;
+    setState(() => _ready = true);
+    _bootstrapBackground();
   }
 
   @override
   void dispose() {
+    _splashWatchdog?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -161,11 +202,29 @@ class _AbTingShuAppState extends State<AbTingShuApp>
   /// 退到后台/被系统回收前落库进度，保证下次续播精确到秒
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _repaintOnResume();
+      return;
+    }
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached ||
         state == AppLifecycleState.hidden) {
       BookPlayer.instance.flushProgress();
     }
+  }
+
+  /// 暖启动兜底：车机把应用放后台后再点图标，进程与 FlutterEngine 都还活着，
+  /// 新窗口拿不到新帧时 Android 会一直显示启动窗口（深空蓝 + LOGO），
+  /// 表现就是「卡在启动图标，退出重进才正常」。回到前台时强制整树重建并绘制一帧。
+  void _repaintOnResume() {
+    if (!mounted) return;
+    setState(() {});
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final root = WidgetsBinding.instance.rootElement;
+      if (root == null) return;
+      _markNeedsBuildDeep(root);
+      WidgetsBinding.instance.scheduleFrame();
+    });
   }
 
   @override
