@@ -179,7 +179,7 @@ class _BookDetailPageState extends State<BookDetailPage> {
             onPressed: chapters.isEmpty
                 ? null
                 : () => CacheSheet.show(context, book: book),
-            tooltip: '批量缓存',
+            tooltip: '缓存选集',
             icon: Icon(
               Icons.download_for_offline_outlined,
               color: AppTheme.textSub,

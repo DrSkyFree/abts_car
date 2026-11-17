@@ -828,9 +828,11 @@ class _CacheEmpty extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              '在书籍详情页点每集后面的下载图标，\n或用「批量缓存」一次存下多集，无网也能听',
+              '在书籍详情页点每集后面的下载图标，\n'
+              '或用「缓存选集」手动勾选几集，无网也能听\n'
+              '缓存仅在本应用内播放，有效期 ${CacheStore.ttl.inDays} 天，到期自动清理',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12, color: AppTheme.textSub),
+              style: TextStyle(fontSize: 12, color: AppTheme.textSub, height: 1.6),
             ),
           ],
         ),

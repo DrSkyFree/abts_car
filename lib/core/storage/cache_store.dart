@@ -288,6 +288,39 @@ class CacheStore extends ChangeNotifier {
   static const _eventsKey = 'abts_cache_events';
   static const _locationKey = 'abts_cache_location';
 
+  /// 缓存有效期：7 天。
+  ///
+  /// 离线缓存只作为「临时离线收听」的副本，不做长期保存；
+  /// 到期自动删除文件与索引，避免演变成长期复制。
+  static const Duration ttl = Duration(days: 7);
+
+  /// 到期检查定时器：车机常驻不退出，启动后每 6 小时再查一次
+  Timer? _ttlTimer;
+
+  /// 这条缓存是否已过有效期（老数据没有时间戳的保留，不误删）
+  bool isExpired(CacheEntry e) {
+    if (e.cachedAt <= 0) return false;
+    return DateTime.now().millisecondsSinceEpoch - e.cachedAt >
+        ttl.inMilliseconds;
+  }
+
+  /// 清理到期缓存（文件 + 索引），返回清理条数
+  Future<int> purgeExpired() async {
+    final expired = _entries.where(isExpired).toList();
+    if (expired.isEmpty) return 0;
+    _entries.removeWhere(isExpired);
+    await _save();
+    for (final e in expired) {
+      try {
+        final f = await _fileOf(e.bvid, e.cid);
+        if (f != null && await f.exists()) await f.delete();
+      } catch (_) {}
+    }
+    logEvent('缓存到期清理 ${expired.length} 集（有效期 ${ttl.inDays} 天）');
+    notifyListeners();
+    return expired.length;
+  }
+
   /// 缓存位置偏好：'internal'（应用内部存储）/ 'external'（外部存储 / SD 卡）
   String _location = 'internal';
   String get location => _location;
@@ -984,8 +1017,13 @@ class CacheStore extends ChangeNotifier {
             (e) => _QueueItem.fromJson((e as Map).cast<String, dynamic>())));
       } catch (_) {}
     }
-    // 清理磁盘上已被删掉的孤儿文件 + 校验索引与文件一致
+    // 清理磁盘上已被删掉的孤儿文件 + 校验索引与文件一致（内部会先做到期清理）
     unawaited(_reconcile());
+    // 车机常年不退出：除启动外，每 6 小时再检查一次 7 天有效期
+    _ttlTimer?.cancel();
+    _ttlTimer = Timer.periodic(const Duration(hours: 6), (_) {
+      unawaited(purgeExpired());
+    });
   }
 
   /// 注入续传所需的地址解析器与请求头，并在有未完成队列时自动开始
@@ -1086,6 +1124,12 @@ class CacheStore extends ChangeNotifier {
 
       // ① 旧版迁移：从外部目录搬到当前目录，尽量保住用户已有的缓存
       await _migrateFromExternal();
+
+      // ①.5 到期清理：超过 7 天的缓存连同文件一起删掉（合规上只做临时离线）
+      final purged = await purgeExpired();
+      if (purged > 0) {
+        debugPrint('[CacheStore] 到期清理 $purged 条缓存');
+      }
 
       // ② 索引 → 磁盘：文件没了就摘掉记录
       final alive = <CacheEntry>[];
@@ -1239,6 +1283,13 @@ class CacheStore extends ChangeNotifier {
 
   bool isCached(String bvid, int cid) {
     return _entries.any((e) => e.bvid == bvid && e.cid == cid);
+  }
+
+  CacheEntry? entryOf(String bvid, int cid) {
+    for (final e in _entries) {
+      if (e.bvid == bvid && e.cid == cid) return e;
+    }
+    return null;
   }
 
   List<CacheEntry> entriesOf(String bvid) =>
@@ -1502,6 +1553,13 @@ class CacheStore extends ChangeNotifier {
   /// 一定写进事件日志。
   Future<String?> cacheFilePath(String bvid, int cid) async {
     if (bvid.isEmpty || cid == 0) return null;
+    // 过了有效期就不再当离线用：删掉文件与索引，播放自动回退在线
+    final entry = entryOf(bvid, cid);
+    if (entry != null && isExpired(entry)) {
+      await remove(bvid, cid);
+      logEvent('缓存已到期，改为在线播放 $bvid/$cid');
+      return null;
+    }
     try {
       final f = await _fileOf(bvid, cid);
       if (f == null) return null;

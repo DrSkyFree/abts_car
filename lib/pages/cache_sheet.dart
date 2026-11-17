@@ -8,7 +8,7 @@ import '../models/chapter.dart';
 import '../player/book_player.dart';
 import '../services/umeng_analytics.dart';
 
-/// 缓存选集：勾选章节后批量下载，下载完可离线播放
+/// 缓存选集：手动勾选章节后加入后台缓存队列（仅临时离线，7 天有效）
 ///
 /// 两种入口：
 /// - 播放页：传入 [book]（当前书）与预选章节
@@ -152,29 +152,6 @@ class _CacheSheetState extends State<CacheSheet> {
                     color: AppTheme.textMain,
                   ),
                 ),
-                const Spacer(),
-                TextButton(
-                  onPressed: running
-                      ? null
-                      : () {
-                          setState(() {
-                            if (_selected.length == chapters.length) {
-                              _selected.clear();
-                            } else {
-                              _selected
-                                ..clear()
-                                ..addAll(List.generate(chapters.length, (i) => i));
-                            }
-                          });
-                        },
-                  child: Text(
-                    _selected.length == chapters.length ? '取消全选' : '全选',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: running ? AppTheme.textHint : AppTheme.accent,
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
@@ -182,7 +159,8 @@ class _CacheSheetState extends State<CacheSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
               '${book.cleanTitle} · 共 ${chapters.length} 集\n'
-              '已缓存 ${cache.countOf(bvid)} 集 · 占用 ${cache.totalSizeText}',
+              '已缓存 ${cache.countOf(bvid)} 集 · 占用 ${cache.totalSizeText} · '
+              '缓存有效期 ${CacheStore.ttl.inDays} 天',
               style: TextStyle(fontSize: 12, color: AppTheme.textSub),
             ),
           ),
