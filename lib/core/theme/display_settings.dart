@@ -1,9 +1,26 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// 屏幕显示设置：整体缩放、字号、封面尺寸与四周边距。
-///
-/// 本应用只面向车机中控，「使用设备」固定为车机，不再提供手机/平板预设。
+/// 使用设备：手机 / 车机
+enum DeviceProfile {
+  phone,
+  car;
+
+  String get label => switch (this) {
+        DeviceProfile.phone => '手机 / 平板',
+        DeviceProfile.car => '车机',
+      };
+
+  String get desc => switch (this) {
+        DeviceProfile.phone => '默认布局，底部导航，触屏操作',
+        DeviceProfile.car => '宽屏侧栏布局，预留顶部状态栏空间，字号放大',
+      };
+}
+
+/// 屏幕显示设置：使用设备、整体缩放、字号、封面尺寸与四周边距。
 ///
 /// 车机中控常见问题：系统状态栏/底栏是画在应用之上的覆盖层，应用拿不到
 /// `MediaQuery.padding`，于是内容被顶栏压住；同时 1920 宽的大屏按 dp 渲染
@@ -14,6 +31,9 @@ class DisplaySettings extends ChangeNotifier {
   DisplaySettings._();
   static final DisplaySettings instance = DisplaySettings._();
 
+  static const _channel = MethodChannel('abts/device');
+
+  static const _kDevice = 'display_device';
   static const _kScale = 'display_scale';
   static const _kTextScale = 'display_text_scale';
   static const _kCoverScale = 'display_cover_scale';
@@ -31,19 +51,17 @@ class DisplaySettings extends ChangeNotifier {
   static const double maxCoverScale = 1.3;
   static const double maxMargin = 30;
 
-  // 默认即车机预设：顶部留 7% 避开中控状态栏，字号放大、封面缩小
-  static const double defaultScale = 1.0;
-  static const double defaultTextScale = 1.3;
-  static const double defaultCoverScale = 0.85;
-  static const double defaultMarginTop = 7;
-
-  double _scale = defaultScale;
-  double _textScale = defaultTextScale;
-  double _coverScale = defaultCoverScale;
-  double _marginTop = defaultMarginTop;
+  DeviceProfile _device = DeviceProfile.phone;
+  double _scale = 1.0;
+  double _textScale = 1.0;
+  double _coverScale = 1.0;
+  double _marginTop = 0;
   double _marginBottom = 0;
   double _marginLeft = 0;
   double _marginRight = 0;
+
+  DeviceProfile get device => _device;
+  bool get isCar => _device == DeviceProfile.car;
 
   /// 整体界面缩放：1.0 为原始尺寸
   double get scale => _scale;
@@ -77,26 +95,54 @@ class DisplaySettings extends ChangeNotifier {
 
   Future<void> load() async {
     final sp = await SharedPreferences.getInstance();
-    _scale = sp.getDouble(_kScale) ?? defaultScale;
-    _textScale = sp.getDouble(_kTextScale) ?? defaultTextScale;
-    _coverScale = sp.getDouble(_kCoverScale) ?? defaultCoverScale;
-    _marginTop = sp.getDouble(_kMarginTop) ?? defaultMarginTop;
+    _device = sp.getString(_kDevice) == DeviceProfile.car.name
+        ? DeviceProfile.car
+        : DeviceProfile.phone;
+    _scale = sp.getDouble(_kScale) ?? 1.0;
+    _textScale = sp.getDouble(_kTextScale) ?? 1.0;
+    _coverScale = sp.getDouble(_kCoverScale) ?? 1.0;
+    _marginTop = sp.getDouble(_kMarginTop) ?? 0;
     _marginBottom = sp.getDouble(_kMarginBottom) ?? 0;
     _marginLeft = sp.getDouble(_kMarginLeft) ?? 0;
     _marginRight = sp.getDouble(_kMarginRight) ?? 0;
   }
 
-  /// 恢复车机默认预设
-  Future<void> resetToPreset() async {
-    _scale = defaultScale;
-    _textScale = defaultTextScale;
-    _coverScale = defaultCoverScale;
-    _marginTop = defaultMarginTop;
-    _marginBottom = 0;
-    _marginLeft = 0;
-    _marginRight = 0;
+  /// 切换设备并套用该设备的推荐预设（本次优化：选车机后自动重启）
+  Future<void> setDevice(DeviceProfile d) async {
+    if (_device == d) return;
+    _device = d;
+    _applyPresetValues(d);
     notifyListeners();
     await _persist();
+  }
+
+  /// 把当前设备的推荐值写回（用于「恢复默认」）
+  Future<void> resetToPreset() async {
+    _applyPresetValues(_device);
+    notifyListeners();
+    await _persist();
+  }
+
+  void _applyPresetValues(DeviceProfile d) {
+    switch (d) {
+      case DeviceProfile.phone:
+        _scale = 1.0;
+        _textScale = 1.0;
+        _coverScale = 1.0;
+        _marginTop = 0;
+        _marginBottom = 0;
+        _marginLeft = 0;
+        _marginRight = 0;
+      case DeviceProfile.car:
+        // 顶部留 7% 避开中控状态栏；字号放大、封面缩小，两者独立可调
+        _scale = 1.0;
+        _textScale = 1.3;
+        _coverScale = 0.85;
+        _marginTop = 7;
+        _marginBottom = 0;
+        _marginLeft = 0;
+        _marginRight = 0;
+    }
   }
 
   Future<void> setScale(double v) => _set(() => _scale = _clamp(v, minScale, maxScale));
@@ -124,6 +170,7 @@ class DisplaySettings extends ChangeNotifier {
 
   Future<void> _persist() async {
     final sp = await SharedPreferences.getInstance();
+    await sp.setString(_kDevice, _device.name);
     await sp.setDouble(_kScale, _scale);
     await sp.setDouble(_kTextScale, _textScale);
     await sp.setDouble(_kCoverScale, _coverScale);
@@ -131,5 +178,15 @@ class DisplaySettings extends ChangeNotifier {
     await sp.setDouble(_kMarginBottom, _marginBottom);
     await sp.setDouble(_kMarginLeft, _marginLeft);
     await sp.setDouble(_kMarginRight, _marginRight);
+  }
+
+  /// 关闭进程并重新拉起应用（车机模式切换后让布局彻底重建）
+  Future<void> restartApp() async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _channel.invokeMethod<bool>('restart');
+    } catch (_) {
+      // 通道不可用时静默降级：用户下次手动启动同样生效
+    }
   }
 }

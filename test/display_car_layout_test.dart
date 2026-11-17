@@ -12,11 +12,14 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
+    await ds.setDevice(DeviceProfile.phone);
     await ds.resetToPreset();
   });
 
   group('车机预设', () {
-    test('默认即车机预设：字号 1.3、封面 0.85、顶边距 7%', () async {
+    test('切换车机后套用预设：字号 1.3、封面 0.85、顶边距 7%', () async {
+      await ds.setDevice(DeviceProfile.car);
+      expect(ds.isCar, isTrue);
       expect(ds.scale, 1.0);
       expect(ds.textScale, 1.3);
       expect(ds.coverScale, 0.85);
@@ -27,28 +30,27 @@ void main() {
     });
 
     test('1920x720 上顶边距换算为 50.4 逻辑像素', () async {
+      await ds.setDevice(DeviceProfile.car);
       final insets = ds.insetsFor(const Size(1920, 720));
       expect(insets.top, closeTo(50.4, 0.001));
       expect(insets.horizontal, 0);
     });
 
     test('预设会持久化到 SharedPreferences', () async {
-      await ds.resetToPreset();
+      await ds.setDevice(DeviceProfile.car);
       final sp = await SharedPreferences.getInstance();
+      expect(sp.getString('display_device'), 'car');
       expect(sp.getDouble('display_text_scale'), 1.3);
       expect(sp.getDouble('display_margin_top'), 7);
     });
 
-    test('恢复默认：把所有调整还原为车机预设', () async {
-      await ds.setScale(1.2);
-      await ds.setTextScale(1.6);
-      await ds.setCoverScale(1.3);
-      await ds.setMarginTop(12);
-      await ds.resetToPreset();
-      expect(ds.scale, 1.0);
-      expect(ds.textScale, 1.3);
-      expect(ds.coverScale, 0.85);
-      expect(ds.insetsFor(const Size(1920, 720)).top, closeTo(50.4, 0.001));
+    test('切回手机清空所有调整', () async {
+      await ds.setDevice(DeviceProfile.car);
+      await ds.setDevice(DeviceProfile.phone);
+      expect(ds.isCar, isFalse);
+      expect(ds.textScale, 1.0);
+      expect(ds.coverScale, 1.0);
+      expect(ds.insetsFor(const Size(1920, 720)), EdgeInsets.zero);
     });
   });
 
@@ -81,6 +83,7 @@ void main() {
       tester.view.physicalSize = const Size(1920, 720);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
+      await ds.setDevice(DeviceProfile.car);
 
       late MediaQueryData captured;
       await tester.pumpWidget(
@@ -163,11 +166,15 @@ void main() {
       return cols;
     }
 
-    testWidgets('1920 宽：车机预设（封面 0.85）为 10 列', (tester) async {
+    testWidgets('1920 宽：手机预设 9 列，车机预设因封面 0.85 变为 10 列', (tester) async {
+      await ds.setDevice(DeviceProfile.phone);
+      expect(await colsAt(tester, const Size(1920, 720)), 9);
+      await ds.setDevice(DeviceProfile.car);
       expect(await colsAt(tester, const Size(1920, 720)), 10);
     });
 
     testWidgets('封面尺寸独立可调：调到 1.3 后同一块屏只剩 7 列', (tester) async {
+      await ds.setDevice(DeviceProfile.car);
       expect(await colsAt(tester, const Size(1920, 720)), 10);
       await ds.setCoverScale(1.3);
       expect(await colsAt(tester, const Size(1920, 720)), 7);
@@ -175,9 +182,15 @@ void main() {
 
     // 高度兜底：屏幕更矮时靠增加列数把行高压回来，保证一屏仍能看到第二行
     testWidgets('同一宽度下屏幕更矮时列数不减', (tester) async {
+      await ds.setDevice(DeviceProfile.phone);
       final tall = await colsAt(tester, const Size(1600, 900));
       final short = await colsAt(tester, const Size(1600, 600));
       expect(short, greaterThanOrEqualTo(tall));
+    });
+
+    testWidgets('手机竖屏 390 宽保持 3 列', (tester) async {
+      await ds.setDevice(DeviceProfile.phone);
+      expect(await colsAt(tester, const Size(390, 844)), 3);
     });
   });
 }

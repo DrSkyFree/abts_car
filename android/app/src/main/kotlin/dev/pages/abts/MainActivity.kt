@@ -250,6 +250,23 @@ class MainActivity : AudioServiceActivity() {
                     }
                 }
 
+                // 重建布局参数后自动重启（切换「使用设备」为车机时使用）
+                "restart" -> {
+                    result.success(true)
+                    try {
+                        val intent = packageManager.getLaunchIntentForPackage(packageName)
+                        intent?.addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP,
+                        )
+                        if (intent != null) startActivity(intent)
+                    } catch (_: Exception) {
+                        // 个别车机限制自启动时忽略，用户手动重开同样生效
+                    }
+                    android.os.Handler(mainLooper).postDelayed({
+                        android.os.Process.killProcess(android.os.Process.myPid())
+                    }, 400)
+                }
+
                 else -> result.notImplemented()
             }
         }
