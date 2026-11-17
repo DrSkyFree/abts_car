@@ -17,6 +17,9 @@ import android.os.StatFs
 import android.provider.Settings
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsets
+import android.view.WindowInsetsController
+import android.view.WindowManager
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -34,6 +37,9 @@ class MainActivity : AudioServiceActivity() {
     private var focusRequest: AudioFocusRequest? = null
     private var cacheNotifyManager: NotificationManager? = null
 
+    /// 全屏模式（由 Dart 侧 `abts/device` 的 setFullscreen 控制）
+    private var fullscreen = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         disableSystemFocusHighlight(window.decorView)
@@ -43,6 +49,46 @@ class MainActivity : AudioServiceActivity() {
         super.onPostResume()
         // FlutterView 在 onCreate 后挂载，这里再扫一遍，确保系统焦点框被关掉
         disableSystemFocusHighlight(window.decorView)
+        // 个别车机在恢复前台时会重置窗口 flag，回到前台重新套一次全屏
+        if (fullscreen) applyFullscreen(true)
+    }
+
+    /// 全屏：API 30+ 用 WindowInsetsController，24~29 用 systemUiVisibility；
+    /// 同时加 FLAG_LAYOUT_NO_LIMITS，让内容铺满整个屏幕（含被系统覆盖层占用的区域）。
+    private fun applyFullscreen(on: Boolean) {
+        val w = window ?: return
+        if (on) {
+            w.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
+        } else {
+            w.clearFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            w.setDecorFitsSystemWindows(!on)
+            val controller = w.insetsController
+            if (on) {
+                controller?.hide(
+                    WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars(),
+                )
+                controller?.systemBarsBehavior =
+                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            } else {
+                controller?.show(
+                    WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars(),
+                )
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            w.decorView.systemUiVisibility = if (on) {
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                    View.SYSTEM_UI_FLAG_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            } else {
+                View.SYSTEM_UI_FLAG_VISIBLE
+            }
+        }
     }
 
     /// Flutter 自己绘制焦点态；关掉 Android 给 FlutterView 套的默认焦点框，
@@ -265,6 +311,14 @@ class MainActivity : AudioServiceActivity() {
                     android.os.Handler(mainLooper).postDelayed({
                         android.os.Process.killProcess(android.os.Process.myPid())
                     }, 400)
+                }
+
+                // 全屏模式：隐藏系统状态栏/导航栏（沉浸式），兼容 API 24 ~ 最新
+                "setFullscreen" -> {
+                    val on = call.argument<Boolean>("on") ?: false
+                    fullscreen = on
+                    applyFullscreen(on)
+                    result.success(true)
                 }
 
                 else -> result.notImplemented()

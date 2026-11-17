@@ -44,6 +44,7 @@ class DisplaySettings extends ChangeNotifier {
   static const _kMarginBottom = 'display_margin_bottom';
   static const _kMarginLeft = 'display_margin_left';
   static const _kMarginRight = 'display_margin_right';
+  static const _kFullscreen = 'display_fullscreen';
 
   // 可调范围（界面缩放同时作用于按钮、列表、封面等所有 dp 尺寸）
   static const double minScale = 0.7;
@@ -63,8 +64,12 @@ class DisplaySettings extends ChangeNotifier {
   double _marginLeft = 0;
   double _marginRight = 0;
 
+  /// 全屏模式：隐藏系统状态栏/导航栏（沉浸式），开启后四周边距不再生效
+  bool _fullscreen = false;
+
   DeviceProfile get device => _device;
   bool get isCar => _device == DeviceProfile.car;
+  bool get fullscreen => _fullscreen;
 
   /// 整体界面缩放：1.0 为原始尺寸
   double get scale => _scale;
@@ -81,12 +86,16 @@ class DisplaySettings extends ChangeNotifier {
   double get marginLeft => _marginLeft;
   double get marginRight => _marginRight;
 
-  EdgeInsets insetsFor(Size viewport) => EdgeInsets.fromLTRB(
-        viewport.width * _marginLeft / 100,
-        viewport.height * _marginTop / 100,
-        viewport.width * _marginRight / 100,
-        viewport.height * _marginBottom / 100,
-      );
+  /// 全屏模式下四周边距不生效（系统栏已隐藏，无需避让）
+  EdgeInsets insetsFor(Size viewport) {
+    if (_fullscreen) return EdgeInsets.zero;
+    return EdgeInsets.fromLTRB(
+      viewport.width * _marginLeft / 100,
+      viewport.height * _marginTop / 100,
+      viewport.width * _marginRight / 100,
+      viewport.height * _marginBottom / 100,
+    );
+  }
 
   bool get hasTuning =>
       _scale != 1.0 ||
@@ -108,6 +117,27 @@ class DisplaySettings extends ChangeNotifier {
     _marginBottom = sp.getDouble(_kMarginBottom) ?? 0;
     _marginLeft = sp.getDouble(_kMarginLeft) ?? 0;
     _marginRight = sp.getDouble(_kMarginRight) ?? 0;
+    _fullscreen = sp.getBool(_kFullscreen) ?? false;
+    // 启动时把全屏状态同步给原生（沉浸式需要原生侧设置窗口 flag）
+    await _applyFullscreen();
+  }
+
+  /// 开关全屏：原生隐藏系统状态栏/导航栏，随后持久化
+  Future<void> setFullscreen(bool v) async {
+    if (_fullscreen == v) return;
+    _fullscreen = v;
+    notifyListeners();
+    await _persist();
+    await _applyFullscreen();
+  }
+
+  /// 把全屏状态交给原生 `abts/device` 通道处理
+  Future<void> _applyFullscreen() async {
+    try {
+      await _channel.invokeMethod<bool>('setFullscreen', {'on': _fullscreen});
+    } catch (_) {
+      // 通道不可用时静默降级：界面仍按无边距绘制
+    }
   }
 
   /// 切换设备并套用该设备的推荐预设（本次优化：选车机后自动重启）
@@ -120,10 +150,14 @@ class DisplaySettings extends ChangeNotifier {
   }
 
   /// 把当前设备的推荐值写回（用于「恢复默认」）
+  ///
+  /// 同时退出全屏：恢复默认应当回到「带边距避让」的常规形态
   Future<void> resetToPreset() async {
     _applyPresetValues(_device);
+    _fullscreen = false;
     notifyListeners();
     await _persist();
+    await _applyFullscreen();
   }
 
   void _applyPresetValues(DeviceProfile d) {
@@ -181,6 +215,7 @@ class DisplaySettings extends ChangeNotifier {
     await sp.setDouble(_kMarginBottom, _marginBottom);
     await sp.setDouble(_kMarginLeft, _marginLeft);
     await sp.setDouble(_kMarginRight, _marginRight);
+    await sp.setBool(_kFullscreen, _fullscreen);
   }
 
   /// 关闭进程并重新拉起应用（车机模式切换后让布局彻底重建）

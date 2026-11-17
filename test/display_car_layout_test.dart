@@ -36,6 +36,16 @@ void main() {
       expect(insets.horizontal, 0);
     });
 
+    test('全屏模式：边距不生效，关闭后恢复', () async {
+      await ds.setDevice(DeviceProfile.car);
+      expect(ds.insetsFor(const Size(1920, 720)).top, closeTo(50.4, 0.001));
+      await ds.setFullscreen(true);
+      expect(ds.fullscreen, isTrue);
+      expect(ds.insetsFor(const Size(1920, 720)), EdgeInsets.zero);
+      await ds.setFullscreen(false);
+      expect(ds.insetsFor(const Size(1920, 720)).top, closeTo(50.4, 0.001));
+    });
+
     test('预设会持久化到 SharedPreferences', () async {
       await ds.setDevice(DeviceProfile.car);
       final sp = await SharedPreferences.getInstance();

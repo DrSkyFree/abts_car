@@ -28,6 +28,8 @@ class DisplayTuningPage extends StatelessWidget {
         animation: ds,
         builder: (context, _) {
           final wide = WideMode.useWideLayout(context);
+          // 全屏时系统栏已隐藏，四周边距不再生效，对应控件置灰
+          final marginEnabled = !ds.fullscreen;
           final scaleGroup = <Widget>[
             _Stepper(
               label: '缩放',
@@ -61,43 +63,51 @@ class DisplayTuningPage extends StatelessWidget {
             ),
           ];
           final marginGroup = <Widget>[
+            if (!marginEnabled)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
+                child: Text(
+                  '全屏模式下系统栏已隐藏，四周边距不可调；关闭全屏后恢复',
+                  style: TextStyle(fontSize: 12, color: AppTheme.textHint),
+                ),
+              ),
             _Stepper(
               label: '屏幕上边距',
               value: _pctInt(ds.marginTop),
-              onMinus: ds.marginTop > 0
+              onMinus: marginEnabled && ds.marginTop > 0
                   ? () => ds.setMarginTop(ds.marginTop - 1)
                   : null,
-              onPlus: ds.marginTop < DisplaySettings.maxMargin
+              onPlus: marginEnabled && ds.marginTop < DisplaySettings.maxMargin
                   ? () => ds.setMarginTop(ds.marginTop + 1)
                   : null,
             ),
             _Stepper(
               label: '屏幕下边距',
               value: _pctInt(ds.marginBottom),
-              onMinus: ds.marginBottom > 0
+              onMinus: marginEnabled && ds.marginBottom > 0
                   ? () => ds.setMarginBottom(ds.marginBottom - 1)
                   : null,
-              onPlus: ds.marginBottom < DisplaySettings.maxMargin
+              onPlus: marginEnabled && ds.marginBottom < DisplaySettings.maxMargin
                   ? () => ds.setMarginBottom(ds.marginBottom + 1)
                   : null,
             ),
             _Stepper(
               label: '屏幕左边距',
               value: _pctInt(ds.marginLeft),
-              onMinus: ds.marginLeft > 0
+              onMinus: marginEnabled && ds.marginLeft > 0
                   ? () => ds.setMarginLeft(ds.marginLeft - 1)
                   : null,
-              onPlus: ds.marginLeft < DisplaySettings.maxMargin
+              onPlus: marginEnabled && ds.marginLeft < DisplaySettings.maxMargin
                   ? () => ds.setMarginLeft(ds.marginLeft + 1)
                   : null,
             ),
             _Stepper(
               label: '屏幕右边距',
               value: _pctInt(ds.marginRight),
-              onMinus: ds.marginRight > 0
+              onMinus: marginEnabled && ds.marginRight > 0
                   ? () => ds.setMarginRight(ds.marginRight - 1)
                   : null,
-              onPlus: ds.marginRight < DisplaySettings.maxMargin
+              onPlus: marginEnabled && ds.marginRight < DisplaySettings.maxMargin
                   ? () => ds.setMarginRight(ds.marginRight + 1)
                   : null,
             ),
@@ -107,6 +117,8 @@ class DisplayTuningPage extends StatelessWidget {
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    _fullscreenTile(ds),
+                    const SizedBox(height: 2),
                     _note(),
                     const SizedBox(height: 4),
                     Expanded(
@@ -120,9 +132,12 @@ class DisplayTuningPage extends StatelessWidget {
                             ),
                           ),
                           Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: marginGroup,
+                            child: Opacity(
+                              opacity: marginEnabled ? 1 : 0.4,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: marginGroup,
+                              ),
                             ),
                           ),
                         ],
@@ -133,11 +148,16 @@ class DisplayTuningPage extends StatelessWidget {
               : ListView(
                   padding: const EdgeInsets.only(top: 4, bottom: 32),
                   children: [
+                    _fullscreenTile(ds),
+                    const SizedBox(height: 4),
                     _note(),
                     const SizedBox(height: 4),
                     ...scaleGroup,
                     const SizedBox(height: 8),
-                    ...marginGroup,
+                    Opacity(
+                      opacity: marginEnabled ? 1 : 0.4,
+                      child: Column(children: marginGroup),
+                    ),
                   ],
                 );
 
@@ -153,6 +173,32 @@ class DisplayTuningPage extends StatelessWidget {
   static String _pct(double v) => '${(v * 100).round()}%';
   static String _pctInt(double v) => '${v.round()}%';
 
+  /// 全屏开关：隐藏系统状态栏/导航栏，内容铺满整屏
+  Widget _fullscreenTile(DisplaySettings ds) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+      child: Material(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        child: SwitchListTile(
+          value: ds.fullscreen,
+          onChanged: (v) => ds.setFullscreen(v),
+          activeThumbColor: AppTheme.accent,
+          secondary: Icon(Icons.fullscreen_rounded, color: AppTheme.accent),
+          title: Text(
+            '全屏模式',
+            style: TextStyle(fontSize: 14, color: AppTheme.textMain),
+          ),
+          subtitle: Text(
+            '隐藏系统状态栏 / 导航栏，铺满整个屏幕；'
+            '状态栏被做成系统覆盖层的车机也适用。开启后四周边距不可调',
+            style: TextStyle(fontSize: 12, color: AppTheme.textSub),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _note() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
@@ -166,7 +212,8 @@ class DisplayTuningPage extends StatelessWidget {
         child: Text(
           '请注意！这里的功能属于特殊适配操作。\n'
           '· 调得太大或太小可能导致页面显示异常，右侧顶部的「恢复默认」可一键还原。\n'
-          '· 车机顶部状态栏压住内容时，把「屏幕上边距」调到 6%~10% 即可避开。\n'
+          '· 车机顶部状态栏压住内容时，把「屏幕上边距」调到 6%~10% 即可避开；\n'
+          '  若状态栏是系统覆盖层、边距也压不住，打开上面的「全屏模式」。\n'
           '· 设置即时生效，无需重启应用。',
           style: TextStyle(fontSize: 12, color: AppTheme.textSub, height: 1.6),
         ),

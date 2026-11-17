@@ -193,6 +193,7 @@ class ThemePage extends StatelessWidget {
 
   String _summary(DisplaySettings ds) {
     final parts = <String>[
+      if (ds.fullscreen) '全屏',
       '缩放 ${(ds.scale * 100).round()}%',
       '字号 ${(ds.textScale * 100).round()}%',
       '封面 ${(ds.coverScale * 100).round()}%',
