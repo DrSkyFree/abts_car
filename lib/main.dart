@@ -134,6 +134,13 @@ class _AbTingShuAppState extends State<AbTingShuApp>
     super.dispose();
   }
 
+  /// 车机会随大灯开关切换系统明暗。AppTheme 的颜色是静态读取的，
+  /// 只有整树重建才会换色；不重建就会出现「背景变深、文字还是深色」→ 看不见。
+  @override
+  void didChangePlatformBrightness() {
+    if (mounted) setState(() {});
+  }
+
   /// 退到后台/被系统回收前落库进度，保证下次续播精确到秒
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -175,7 +182,8 @@ class _AbTingShuAppState extends State<AbTingShuApp>
             home: _ready
                 ? KeyedSubtree(
                     key: ValueKey('theme-${tc.mode.name}'),
-                    child: const HomeShell(),
+                    // 不能是 const：系统明暗变化时要能重建，文字颜色才会跟着换
+                    child: HomeShell(),
                   )
                 : const SplashScreen(),
           );

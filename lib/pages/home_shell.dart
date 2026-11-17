@@ -60,10 +60,11 @@ class _HomeShellState extends State<HomeShell> {
         Expanded(
           child: IndexedStack(
             index: _tab,
-            children: const [BookshelfPage(), DiscoverPage(), MyPage()],
+            // 不用 const：系统明暗切换时需要重建，卡片文字颜色才会刷新
+            children: [BookshelfPage(), DiscoverPage(), MyPage()],
           ),
         ),
-        const MiniPlayer(),
+        MiniPlayer(),
       ],
     );
 
