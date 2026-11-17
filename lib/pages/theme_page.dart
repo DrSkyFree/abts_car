@@ -142,7 +142,7 @@ class ThemePage extends StatelessWidget {
     );
   }
 
-  /// 切换使用设备：选车机时确认后自动关闭并重启应用
+  /// 切换使用设备：切到车机（横屏）时确认后自动关闭并重启应用
   Future<void> _pickDevice(BuildContext context, DeviceProfile d) async {
     final ds = DisplaySettings.instance;
     if (ds.device == d) return;
@@ -153,11 +153,11 @@ class ThemePage extends StatelessWidget {
         builder: (ctx) => AlertDialog(
           backgroundColor: AppTheme.surface,
           title: Text(
-            '切换到车机模式',
+            '切换到车机（横屏）',
             style: TextStyle(color: AppTheme.textMain, fontSize: 17),
           ),
           content: Text(
-            '将套用车机布局：宽屏侧栏、字号放大、封面缩小，并自动避开顶部状态栏。\n\n'
+            '将套用横屏布局：宽屏侧栏、字号放大、封面缩小，并自动避开顶部状态栏。\n\n'
             '切换后应用会自动关闭并重启，播放会中断。',
             style: TextStyle(
               color: AppTheme.textSub,
@@ -182,13 +182,13 @@ class ThemePage extends StatelessWidget {
       );
       if (ok != true) return;
       await ds.setDevice(DeviceProfile.car);
-      messenger.showSnackBar(const SnackBar(content: Text('正在重启以套用车机布局…')));
+      messenger.showSnackBar(const SnackBar(content: Text('正在重启以套用横屏布局…')));
       await ds.restartApp();
       return;
     }
     await ds.setDevice(DeviceProfile.phone);
     if (!context.mounted) return;
-    messenger.showSnackBar(const SnackBar(content: Text('已切回手机布局')));
+    messenger.showSnackBar(const SnackBar(content: Text('已切换为竖屏布局')));
   }
 
   String _summary(DisplaySettings ds) {

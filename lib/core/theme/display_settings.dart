@@ -4,18 +4,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// 使用设备：手机 / 车机
+/// 使用设备：车机（竖屏）/ 车机（横屏）
+///
+/// - 竖屏：走大屏手机的布局逻辑（底部导航、触屏操作），适用于竖装中控
+/// - 横屏：宽屏侧栏布局，预留顶部状态栏空间，字号放大
 enum DeviceProfile {
   phone,
   car;
 
   String get label => switch (this) {
-        DeviceProfile.phone => '手机 / 平板',
-        DeviceProfile.car => '车机',
+        DeviceProfile.phone => '车机（竖屏）',
+        DeviceProfile.car => '车机（横屏）',
       };
 
   String get desc => switch (this) {
-        DeviceProfile.phone => '默认布局，底部导航，触屏操作',
+        DeviceProfile.phone => '大屏手机布局，底部导航、触屏操作，适合竖装中控',
         DeviceProfile.car => '宽屏侧栏布局，预留顶部状态栏空间，字号放大',
       };
 }
