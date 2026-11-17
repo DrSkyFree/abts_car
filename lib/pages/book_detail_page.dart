@@ -14,6 +14,7 @@ import '../services/umeng_analytics.dart';
 import '../utils/format.dart';
 import '../widgets/acrylic_panel.dart';
 import '../widgets/book_cover.dart';
+import '../widgets/marquee_text.dart';
 import '../widgets/page_scaffold.dart';
 import 'cache_sheet.dart';
 import 'player_page.dart';
@@ -489,11 +490,9 @@ class _BookDetailPageState extends State<BookDetailPage> {
         },
         child: Row(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: BookCover(url: book.pic, width: 66, height: 66),
-            ),
-            const SizedBox(width: 16),
+            _playButton(player),
+            // 按钮与文字之间留出呼吸感，车机上更易读
+            const SizedBox(width: 22),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -509,12 +508,11 @@ class _BookDetailPageState extends State<BookDetailPage> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  Text(
+                  // 章节名过长时自动滚动，避免被省略号截断
+                  MarqueeText(
                     chapter == null
                         ? book.cleanTitle
                         : '第 ${chapter.page} 章 · ${chapter.part}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -524,57 +522,55 @@ class _BookDetailPageState extends State<BookDetailPage> {
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            if (player.loading)
-              const Padding(
-                padding: EdgeInsets.all(14),
-                child: SizedBox(
-                  width: 22,
-                  height: 22,
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 播放/暂停：强调色实心圆按钮，放在最左侧便于主驾操作
+  Widget _playButton(BookPlayer player) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: player.loading ? null : player.togglePlay,
+        child: Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppTheme.accent,
+                Color.lerp(AppTheme.accent, Colors.black, 0.28)!,
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.accent.withValues(alpha: 0.42),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: player.loading
+              ? const Padding(
+                  padding: EdgeInsets.all(20),
                   child: CircularProgressIndicator(
                     strokeWidth: 2.4,
-                    color: AppTheme.accent,
+                    color: Colors.white,
                   ),
+                )
+              : Icon(
+                  player.isPlaying
+                      ? Icons.pause_rounded
+                      : Icons.play_arrow_rounded,
+                  color: Colors.white,
+                  size: 38,
                 ),
-              )
-            else
-              Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: player.togglePlay,
-                  child: Container(
-                    width: 62,
-                    height: 62,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          AppTheme.accent,
-                          Color.lerp(AppTheme.accent, Colors.black, 0.28)!,
-                        ],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.accent.withValues(alpha: 0.42),
-                          blurRadius: 18,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      player.isPlaying
-                          ? Icons.pause_rounded
-                          : Icons.play_arrow_rounded,
-                      color: Colors.white,
-                      size: 36,
-                    ),
-                  ),
-                ),
-              ),
-          ],
         ),
       ),
     );

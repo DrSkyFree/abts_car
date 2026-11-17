@@ -4,48 +4,29 @@ import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
 import '../pages/player_page.dart';
 import '../player/book_player.dart';
-import '../widgets/book_cover.dart';
+import 'marquee_text.dart';
 
 /// 底部迷你播放条
-class MiniPlayer extends StatefulWidget {
+class MiniPlayer extends StatelessWidget {
   const MiniPlayer({super.key});
-
-  @override
-  State<MiniPlayer> createState() => _MiniPlayerState();
-}
-
-class _MiniPlayerState extends State<MiniPlayer>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _spin = AnimationController(
-    vsync: this,
-    duration: const Duration(seconds: 10),
-  );
-
-  @override
-  void dispose() {
-    _spin.dispose();
-    super.dispose();
-  }
-
-  void _syncSpin(bool playing) {
-    if (playing) {
-      if (!_spin.isAnimating) _spin.repeat();
-    } else {
-      if (_spin.isAnimating) _spin.stop();
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final player = context.watch<BookPlayer>();
     if (!player.loaded || player.book == null) {
-      _spin.stop();
       return const SizedBox.shrink();
     }
 
     final chapter = player.currentChapter;
-    final playing = player.isPlaying;
-    _syncSpin(playing);
+    final titleStyle = TextStyle(
+      fontSize: 15,
+      fontWeight: FontWeight.w600,
+      color: AppTheme.textMain,
+    );
+    final subStyle = TextStyle(
+      fontSize: 12.5,
+      color: AppTheme.textMain.withValues(alpha: 0.7),
+    );
 
     return Material(
       color: AppTheme.surface,
@@ -59,45 +40,30 @@ class _MiniPlayerState extends State<MiniPlayer>
           decoration: BoxDecoration(
             border: Border(top: BorderSide(color: AppTheme.divider)),
           ),
-          padding: const EdgeInsets.fromLTRB(12, 10, 14, 10),
+          padding: const EdgeInsets.fromLTRB(14, 10, 16, 10),
           child: Row(
             children: [
               // 主驾在左：播放/暂停放最左侧，伸手就能按到
-              _buildButton(player),
-              const SizedBox(width: 12),
-              _buildDisc(player, playing),
-              const SizedBox(width: 12),
+              _MiniPlayButton(player: player),
+              // 按钮与文字之间留出足够呼吸感
+              const SizedBox(width: 22),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      player.book!.cleanTitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textMain,
-                      ),
-                    ),
+                    MarqueeText(player.book!.cleanTitle, style: titleStyle),
                     if (chapter != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
+                      const SizedBox(height: 3),
+                      MarqueeText(
                         '第 ${chapter.page} 章 · ${chapter.part}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: AppTheme.textMain.withValues(alpha: 0.7),
-                        ),
+                        style: subStyle,
                       ),
                     ],
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Icon(
                 Icons.keyboard_arrow_up_rounded,
                 size: 26,
@@ -109,45 +75,15 @@ class _MiniPlayerState extends State<MiniPlayer>
       ),
     );
   }
+}
 
-  /// 左侧旋转唱片：播放时持续旋转，暂停时停在当前角度并叠加播放图标
-  Widget _buildDisc(BookPlayer player, bool playing) {
-    return SizedBox(
-      width: 48,
-      height: 48,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          RotationTransition(
-            turns: _spin,
-            child: ClipOval(
-              child: BookCover(
-                url: player.book!.pic,
-                width: 48,
-                height: 48,
-                borderRadius: BorderRadius.circular(24),
-              ),
-            ),
-          ),
-          if (!playing)
-            Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.black.withValues(alpha: 0.35),
-              ),
-              child: const Icon(
-                Icons.play_arrow_rounded,
-                color: Colors.white,
-                size: 24,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
+/// 播放/暂停：强调色实心圆按钮，车机上易辨认、易点中
+class _MiniPlayButton extends StatelessWidget {
+  final BookPlayer player;
+  const _MiniPlayButton({required this.player});
 
-  /// 播放/暂停：强调色实心圆按钮，位于最左侧，车机上易辨认、易点中
-  Widget _buildButton(BookPlayer player) {
+  @override
+  Widget build(BuildContext context) {
     final loading = player.loading;
     return Material(
       color: Colors.transparent,
@@ -155,8 +91,8 @@ class _MiniPlayerState extends State<MiniPlayer>
         customBorder: const CircleBorder(),
         onTap: loading ? null : player.togglePlay,
         child: Container(
-          width: 60,
-          height: 60,
+          width: 62,
+          height: 62,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: LinearGradient(
@@ -188,7 +124,7 @@ class _MiniPlayerState extends State<MiniPlayer>
                       ? Icons.pause_rounded
                       : Icons.play_arrow_rounded,
                   color: Colors.white,
-                  size: 34,
+                  size: 36,
                 ),
         ),
       ),
