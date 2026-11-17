@@ -36,7 +36,10 @@ class BiliAudioHandler extends BaseAudioHandler {
   BookPlayer get _player => BookPlayer.instance;
 
   @override
-  Future<void> play() => _player.resume();
+  Future<void> play() async {
+    // 车机语音/方向盘「开始播放」：没有音源时接着上次的位置继续
+    await _player.resumeFromMediaCommand();
+  }
 
   @override
   Future<void> pause() => _player.pause();

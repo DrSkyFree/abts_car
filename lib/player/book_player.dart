@@ -985,6 +985,41 @@ class BookPlayer extends ChangeNotifier {
     _pushState(force: true);
   }
 
+  /// 媒体会话（车机语音 / 方向盘 / 蓝牙按键）发起的「播放」。
+  ///
+  /// - 已有音源：正常继续；
+  /// - 没有任何音源（刚被语音「停止」、进程被回收后重开、从未播放过）：
+  ///   接着上次的位置继续——优先当前这本，其次书架里最近在听的一本。
+  ///
+  /// 返回是否真的播起来，供媒体会话决定是否更新状态。
+  Future<bool> resumeFromMediaCommand() async {
+    if (_loaded) {
+      await resume();
+      return true;
+    }
+    // ① 当前这本还在内存里（多半是刚被语音「停止」）：按保存的进度续播
+    final current = _book;
+    if (current != null && _chapters.isNotEmpty) {
+      final saved = _shelf.byBvid(current.bvid);
+      final rawIdx = saved?.lastChapterIndex ?? _index;
+      final idx = rawIdx.clamp(0, _chapters.length - 1).toInt();
+      final ok = await playBook(
+        current,
+        resumeIndex: idx,
+        resumeMs: saved?.positionMs ?? 0,
+      );
+      if (ok) return true;
+    }
+    // ② 冷启动 / 从未播放：续书架里最近在听的一本
+    for (final b in _shelf.books) {
+      if (!b.hasProgress) continue;
+      final outcome = await playBookWithFallback(b);
+      if (outcome == ShelfPlayOutcome.ok) return true;
+    }
+    debugPrint('[BookPlayer] 媒体键播放：没有可续播的书');
+    return false;
+  }
+
   Future<void> pause() async {
     _pausedByInterruption = false;
     await _player.pause();
@@ -1063,6 +1098,8 @@ class BookPlayer extends ChangeNotifier {
 
   Future<void> stop() async {
     _pausedByInterruption = false;
+    // 先留存进度：语音「停止播放」会走到这里，不留的话下次「开始播放」就找不到位置
+    flushProgress();
     // 会话代号自增：让进行中的重连立即作废，避免「按了停止声音又出来」
     _session++;
     await _player.stop();
