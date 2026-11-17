@@ -134,11 +134,28 @@ class _AbTingShuAppState extends State<AbTingShuApp>
     super.dispose();
   }
 
-  /// 车机会随大灯开关切换系统明暗。AppTheme 的颜色是静态读取的，
-  /// 只有整树重建才会换色；不重建就会出现「背景变深、文字还是深色」→ 看不见。
+  /// 车机会随大灯开关切换系统明暗。AppTheme 的颜色是静态读取的，只有重建才会换色；
+  /// 只 setState 首页树，压栈的二级页面（播放页/详情页…）不会重建，会晚一拍甚至不刷新。
+  /// 这里在下一帧把整棵 Element 树标记为需要重建：保留 State 与导航栈，只重新 build。
   @override
   void didChangePlatformBrightness() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() {});
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final root = WidgetsBinding.instance.rootElement;
+      if (root == null) return;
+      _markNeedsBuildDeep(root);
+    });
+  }
+
+  /// 深度遍历并重建：跳过已失活的节点，避免个别路由切换瞬间的元素断言
+  void _markNeedsBuildDeep(Element element) {
+    try {
+      element.markNeedsBuild();
+    } catch (_) {
+      // 已失活/正在卸载的节点忽略即可
+    }
+    element.visitChildren(_markNeedsBuildDeep);
   }
 
   /// 退到后台/被系统回收前落库进度，保证下次续播精确到秒
