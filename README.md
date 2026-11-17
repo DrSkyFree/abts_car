@@ -25,6 +25,34 @@ Android 7.0+ · 宽屏侧栏 · 大按钮触控 · 永久免费 · 开源
 
 非官方项目，与哔哩哔哩无任何官方关联或背书；内容来自哔哩哔哩公开视频的音频轨道，应用本身不存储、不修改、不二次分发任何内容。
 
+## 界面预览
+
+以下截图均为 **1920×720 车机模拟器实拍**，使用车机预设：缩放 100% · 字号 130% · 封面 85% · 上边距 7%。
+
+**发现页（浅色 / 深色）**
+
+![发现页 浅色](docs/screenshots/car/discover-light.jpg)
+![发现页 深色](docs/screenshots/car/discover-dark.jpg)
+
+**正在播放（左操作 / 右圆形封面）**
+
+![播放页 浅色](docs/screenshots/car/player-light.jpg)
+![播放页 深色](docs/screenshots/car/player-dark.jpg)
+
+**书籍详情 + 亚克力浮动播放器**
+
+![详情页](docs/screenshots/car/detail.jpg)
+
+**迷你播放条（播放键在主驾侧）+ 我的**
+
+![我的](docs/screenshots/car/my.jpg)
+
+**车机专有显示设置**
+
+| 外观模式 · 使用设备 | 屏幕缩放与边距调整 |
+|---|---|
+| ![外观模式](docs/screenshots/car/theme-device.jpg) | ![缩放与边距](docs/screenshots/car/display-tuning.jpg) |
+
 ## 车机适配范围
 
 | 项目 | 说明 |
