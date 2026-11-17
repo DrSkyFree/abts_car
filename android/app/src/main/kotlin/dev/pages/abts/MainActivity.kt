@@ -321,6 +321,27 @@ class MainActivity : AudioServiceActivity() {
                     result.success(true)
                 }
 
+                // 完全退出：车机没有后台任务管理，结束前台服务与进程
+                "exit" -> {
+                    result.success(true)
+                    try {
+                        stopService(
+                            Intent(this, com.ryanheise.audioservice.AudioService::class.java),
+                        )
+                    } catch (_: Exception) {
+                        // 服务未启动时忽略
+                    }
+                    // 一并移除最近任务里的条目，避免车机点开又回到旧画面
+                    try {
+                        finishAndRemoveTask()
+                    } catch (_: Exception) {
+                        // 个别 ROM 不支持时忽略
+                    }
+                    android.os.Handler(mainLooper).postDelayed({
+                        android.os.Process.killProcess(android.os.Process.myPid())
+                    }, 300)
+                }
+
                 else -> result.notImplemented()
             }
         }

@@ -14,6 +14,7 @@ import '../player/book_player.dart';
 import '../services/app_update.dart';
 import '../services/auth_store.dart';
 import '../services/browser.dart';
+import '../services/device_service.dart';
 import '../services/umeng_analytics.dart';
 import '../widgets/book_cover.dart';
 import '../widgets/focus_ring.dart';
@@ -54,6 +55,11 @@ class MyPage extends StatelessWidget {
           : AppBar(
               title: const Text('我的'),
               actions: [
+                IconButton(
+                  tooltip: '完全退出',
+                  icon: const Icon(Icons.power_settings_new_rounded, size: 22),
+                  onPressed: () => _confirmExit(context),
+                ),
                 Padding(
                   padding: const EdgeInsets.only(right: 12),
                   child: IconButton(
@@ -67,6 +73,8 @@ class MyPage extends StatelessWidget {
       body: ListView(
         padding: EdgeInsets.only(top: wide ? 8 : 0, bottom: 32),
         children: [
+          // 宽屏没有 AppBar，把「完全退出」放在内容区右上角
+          if (wide) _buildExitRow(context),
           _buildHeader(context, shelf, auth),
           const SizedBox(height: 4),
           _statRow(books, reading, cacheCount, follows, context),
@@ -191,6 +199,59 @@ class MyPage extends StatelessWidget {
 
   void _push(BuildContext context, Widget page) {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+  }
+
+  /// 宽屏没有 AppBar，把「完全退出」放在内容区右上角
+  Widget _buildExitRow(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 8, 0),
+        child: TextButton.icon(
+          onPressed: () => _confirmExit(context),
+          icon: Icon(Icons.power_settings_new_rounded,
+              size: 18, color: AppTheme.textSub),
+          label: Text('完全退出',
+              style: TextStyle(fontSize: 13, color: AppTheme.textSub)),
+        ),
+      ),
+    );
+  }
+
+  /// 完全退出：车机没有「后台任务管理 / 上滑关闭」，
+  /// 这里先落盘播放进度，再结束后台播放服务与进程。
+  Future<void> _confirmExit(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
+        title: Text('完全退出',
+            style: TextStyle(color: AppTheme.textMain, fontSize: 17)),
+        content: Text(
+          '将停止当前播放，并结束应用与后台播放服务。\n'
+          '车机没有后台任务管理时，用这里彻底退出；下次打开会从上次的位置继续播放。',
+          style: TextStyle(fontSize: 12.5, color: AppTheme.textSub, height: 1.6),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('取消', style: TextStyle(color: AppTheme.textSub)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('退出', style: TextStyle(color: AppTheme.accent)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    // 先停止播放（内部会先落盘进度）并清掉媒体通知，再结束进程
+    try {
+      await BookPlayer.instance.stop();
+    } catch (_) {
+      // 播放器异常也照常退出
+    }
+    await DeviceService.instance.exitApp();
   }
 
   Widget _buildHeader(BuildContext context, ShelfStore shelf, LoginStore auth) {
