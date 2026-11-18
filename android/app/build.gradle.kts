@@ -71,3 +71,11 @@ android {
 flutter {
     source = "../.."
 }
+
+// fullscreen-core: 抽自 car-fullscreen 仓库，封装 FLAG_FULLSCREEN + 沉浸式全套
+// + 三重重应用保险（焦点回来、onPostResume、SystemUiVisibility 变化），
+// 以及 StatusBarInsetDetector 探测厂商自绘状态栏覆盖层高度。
+// 随 .aar 提交 android/app/libs/，无需额外 Maven 仓库。
+dependencies {
+    compileOnly(files("libs/car-fullscreen-core.aar"))
+}

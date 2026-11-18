@@ -17,10 +17,10 @@ import android.os.StatFs
 import android.provider.Settings
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowInsets
-import android.view.WindowInsetsController
 import android.view.WindowManager
 import com.ryanheise.audioservice.AudioServiceActivity
+import dev.carfullscreen.FullscreenHelper
+import dev.carfullscreen.StatusBarInsetDetector
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
@@ -37,14 +37,17 @@ class MainActivity : AudioServiceActivity() {
     private var focusRequest: AudioFocusRequest? = null
     private var cacheNotifyManager: NotificationManager? = null
 
-    /// 全屏模式（由 Dart 侧 `abts/device` 的 setFullscreen 控制）
-    private var fullscreen = false
+    /// 全屏管理器：封装 FLAG_FULLSCREEN + 沉浸式全套 + 三重重应用保险（来自 car-fullscreen-core）
+    private val fullscreenHelper = FullscreenHelper()
 
     /// abts/device 通道：既接收 Dart 调用，也向 Dart 推送亮/熄屏事件
     private var deviceChannel: MethodChannel? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // 绑定 FullscreenHelper → 一行替代原来所有 applyFullscreen + 三重重应用
+        fullscreenHelper.bind(this, lifecycle)
+
         disableSystemFocusHighlight(window.decorView)
         // 熄屏/亮屏广播：熄屏即车机熄火休眠的前兆，用于暂停播放并禁止自动续播
         try {
@@ -60,77 +63,26 @@ class MainActivity : AudioServiceActivity() {
         } catch (_: Exception) {
             // 个别 ROM 限制注册时忽略，不影响正常播放
         }
-        // 个别车机的状态栏是常驻覆盖层，会在沉浸模式被重置后重新出现；
-        // 这里监听系统 UI 可见性变化，丢了全屏标志就补一次（仅 API 28 及以下需要）
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            @Suppress("DEPRECATION")
-            window.decorView.setOnSystemUiVisibilityChangeListener { visibility ->
-                if (fullscreen && (visibility and View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
-                    window.decorView.postDelayed({
-                        if (fullscreen) applyFullscreen(true)
-                    }, 400)
-                }
-            }
-        }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        // 部分车机在窗口重新获得焦点时会恢复系统栏
-        if (hasFocus && fullscreen) applyFullscreen(true)
+        // 焦点回来 → FullscreenHelper 自动重应用全屏（车机语音/浮层抢占后系统栏常回来）
+        fullscreenHelper.onWindowFocusChanged(hasFocus)
     }
 
     override fun onPostResume() {
         super.onPostResume()
-        // FlutterView 在 onCreate 后挂载，这里再扫一遍，确保系统焦点框被关掉
         disableSystemFocusHighlight(window.decorView)
-        // 个别车机在恢复前台时会重置窗口 flag，回到前台重新套一次全屏
-        if (fullscreen) applyFullscreen(true)
+        // FullscreenHelper 绑定 lifecycle 后会在 ON_RESUME 自动重应用，
+        // 这里再手动调一次确保 onPostResume 之后 FLAG 必然正确
+        fullscreenHelper.applyFullscreen(fullscreenHelper.isFullscreen())
     }
 
-    /// 全屏：API 30+ 用 WindowInsetsController，24~29 用 systemUiVisibility；
-    /// 同时加 FLAG_LAYOUT_NO_LIMITS，让内容铺满整个屏幕（含被系统覆盖层占用的区域）。
+    /// 兼容入口：Dart 侧旧代码仍可调 applyFullscreen，内部已转发到 FullscreenHelper
+    @Deprecated("已迁移到 FullscreenHelper，仅作兼容代理")
     private fun applyFullscreen(on: Boolean) {
-        val w = window ?: return
-        if (on) {
-            // FLAG_FULLSCREEN 一并加上：部分车机的自绘状态栏只认窗口的全屏标志
-            w.addFlags(
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                    WindowManager.LayoutParams.FLAG_FULLSCREEN,
-            )
-        } else {
-            w.clearFlags(
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                    WindowManager.LayoutParams.FLAG_FULLSCREEN,
-            )
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            w.setDecorFitsSystemWindows(!on)
-            val controller = w.insetsController
-            if (on) {
-                controller?.hide(
-                    WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars(),
-                )
-                controller?.systemBarsBehavior =
-                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            } else {
-                controller?.show(
-                    WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars(),
-                )
-            }
-        } else {
-            @Suppress("DEPRECATION")
-            w.decorView.systemUiVisibility = if (on) {
-                View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-                    View.SYSTEM_UI_FLAG_FULLSCREEN or
-                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-            } else {
-                View.SYSTEM_UI_FLAG_VISIBLE
-            }
-        }
+        fullscreenHelper.setFullscreen(on)
     }
 
     /// Flutter 自己绘制焦点态；关掉 Android 给 FlutterView 套的默认焦点框，
@@ -378,11 +330,10 @@ class MainActivity : AudioServiceActivity() {
                     }, 400)
                 }
 
-                // 全屏模式：隐藏系统状态栏/导航栏（沉浸式），兼容 API 24 ~ 最新
+                // 全屏模式：委托给 car-fullscreen-core 的 FullscreenHelper
                 "setFullscreen" -> {
                     val on = call.argument<Boolean>("on") ?: false
-                    fullscreen = on
-                    applyFullscreen(on)
+                    fullscreenHelper.setFullscreen(on)
                     result.success(true)
                 }
 
@@ -390,21 +341,8 @@ class MainActivity : AudioServiceActivity() {
                 // 部分车机的状态栏由厂商常驻覆盖层绘制，应用无权隐藏，
                 // Dart 侧据此把内容下移避让，避免被顶栏压住。
                 "statusBarInset" -> {
-                    val inset = try {
-                        val insets = window.decorView.rootWindowInsets
-                        when {
-                            insets == null -> 0
-                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ->
-                                insets.getInsets(WindowInsets.Type.statusBars()).top
-                            else -> {
-                                @Suppress("DEPRECATION")
-                                insets.systemWindowInsetTop
-                            }
-                        }
-                    } catch (_: Exception) {
-                        0
-                    }
-                    result.success(inset)
+                    val inset = StatusBarInsetDetector.detectFromActivity(this)
+                    result.success(if (inset < 0) 0 else inset)
                 }
 
                 // 完全退出：车机没有后台任务管理，结束前台服务与进程
