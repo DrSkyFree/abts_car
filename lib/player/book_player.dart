@@ -879,7 +879,7 @@ class BookPlayer extends ChangeNotifier {
         'Referer': BiliEndpoints.home,
       };
 
-  /// 候选音频地址列表：AAC 优先（稳定），flac/dolby 兜底；百度 http 转 https
+  /// 候选音频地址列表：AAC 优先（稳定），flac/dolby 兜底；http 地址统一转 https
   Future<List<String>> _fetchStreamCandidates(int cid) async {
     final cached = _urlCache[cid];
     if (cached != null) {
