@@ -74,7 +74,7 @@ class MainActivity : AudioServiceActivity() {
         if (fullscreen) applyFullscreen(true)
     }
 
-    /// 全屏：对齐百度地图的纯净做法，只保留窗口级 FLAG_FULLSCREEN + 布局标志。
+    /// 全屏：只用纯净的窗口级 FLAG_FULLSCREEN + 布局标志。
     ///
     /// 不用 FLAG_LAYOUT_NO_LIMITS 与沉浸式 SYSTEM_UI_FLAG_HIDE_*：
     /// 部分车机的自绘状态栏只认窗口级全屏标志，混入 LAYOUT_NO_LIMITS/沉浸式
@@ -350,7 +350,7 @@ class MainActivity : AudioServiceActivity() {
                     }, 400)
                 }
 
-                // 全屏模式：纯净的窗口级全屏标志（对齐百度地图做法）
+                // 全屏模式：纯净的窗口级全屏标志
                 "setFullscreen" -> {
                     val on = call.argument<Boolean>("on") ?: false
                     fullscreen = on
