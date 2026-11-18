@@ -18,6 +18,7 @@ import android.provider.Settings
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.view.WindowManager
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -71,37 +72,84 @@ class MainActivity : AudioServiceActivity() {
         super.onPostResume()
         disableSystemFocusHighlight(window.decorView)
         // 个别车机在恢复前台时会重置窗口 flag，回到前台重新套一次全屏
-        if (fullscreen) applyFullscreen(true)
+        if (fullscreen) {
+            applyFullscreen(true)
+            startReapplyLoop()
+        }
     }
 
-    /// 全屏：只用纯净的窗口级 FLAG_FULLSCREEN + 布局标志。
-    ///
-    /// 不用 FLAG_LAYOUT_NO_LIMITS 与沉浸式 SYSTEM_UI_FLAG_HIDE_*：
-    /// 部分车机的自绘状态栏只认窗口级全屏标志，混入 LAYOUT_NO_LIMITS/沉浸式
-    /// flags 后反而会一直显示。
+    override fun onPause() {
+        super.onPause()
+        // 退到后台停止周期重套，避免无谓唤醒
+        window?.decorView?.removeCallbacks(fullscreenReapply)
+    }
+
+    /// 全屏期间周期性重套：车机语音/系统浮层/休眠唤醒都可能重置系统栏，
+    /// 只在生命周期回调里补一次不够（API 29 及以下尤其明显）。
+    private val fullscreenReapply = object : Runnable {
+        override fun run() {
+            if (!fullscreen) return
+            applyFullscreen(true)
+            window?.decorView?.postDelayed(this, 2000)
+        }
+    }
+
+    private fun startReapplyLoop() {
+        val dv = window?.decorView ?: return
+        dv.removeCallbacks(fullscreenReapply)
+        dv.postDelayed(fullscreenReapply, 2000)
+    }
+
+    /// 全屏：窗口级 FLAG_FULLSCREEN + FLAG_LAYOUT_NO_LIMITS + 沉浸式 flags 全开。
+    /// API 30+ 走 WindowInsetsController；24~29 走 systemUiVisibility 全套。
     private fun applyFullscreen(on: Boolean) {
         val w = window ?: return
         if (on) {
-            w.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                val attrs = w.attributes
-                attrs.layoutInDisplayCutoutMode =
-                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-                w.attributes = attrs
-            }
-            @Suppress("DEPRECATION")
-            w.decorView.systemUiVisibility =
-                View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+            w.addFlags(
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN,
+            )
         } else {
-            w.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                val attrs = w.attributes
-                attrs.layoutInDisplayCutoutMode =
-                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
-                w.attributes = attrs
+            w.clearFlags(
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN,
+            )
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val attrs = w.attributes
+            attrs.layoutInDisplayCutoutMode = if (on) {
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            } else {
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT
             }
+            w.attributes = attrs
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            w.setDecorFitsSystemWindows(!on)
+            val controller = w.insetsController
+            if (on) {
+                controller?.hide(
+                    WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars(),
+                )
+                controller?.systemBarsBehavior =
+                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            } else {
+                controller?.show(
+                    WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars(),
+                )
+            }
+        } else {
             @Suppress("DEPRECATION")
-            w.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_VISIBLE
+            w.decorView.systemUiVisibility = if (on) {
+                View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                    View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                    View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                    View.SYSTEM_UI_FLAG_FULLSCREEN or
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+            } else {
+                View.SYSTEM_UI_FLAG_VISIBLE
+            }
         }
     }
 
@@ -350,11 +398,16 @@ class MainActivity : AudioServiceActivity() {
                     }, 400)
                 }
 
-                // 全屏模式：纯净的窗口级全屏标志
+                // 全屏模式：窗口级 + 沉浸式全套，全屏期间周期性重套防止被系统重置
                 "setFullscreen" -> {
                     val on = call.argument<Boolean>("on") ?: false
                     fullscreen = on
                     applyFullscreen(on)
+                    if (on) {
+                        startReapplyLoop()
+                    } else {
+                        window?.decorView?.removeCallbacks(fullscreenReapply)
+                    }
                     result.success(true)
                 }
 
@@ -378,6 +431,11 @@ class MainActivity : AudioServiceActivity() {
                     }
                     result.success(inset)
                 }
+
+                // 开机计时（毫秒，不含深度休眠）：Dart 侧配合墙钟检测熄火休眠
+                "elapsedRealtime" -> result.success(
+                    android.os.SystemClock.elapsedRealtime(),
+                )
 
                 // 完全退出：车机没有后台任务管理，结束前台服务与进程
                 "exit" -> {

@@ -100,10 +100,20 @@ class BookPlayer extends ChangeNotifier {
 
   /// 是否允许自动续播。
   ///
-  /// 车机没有后台任务管理：上次没退出应用时，下次着火车机会把媒体会话重新
-  /// 拉起来并下发「播放」，表现为没打开应用就自己响。因此熄屏（熄火休眠）
-  /// 时暂停并落盘进度，必须等用户重新打开应用（回到前台）后才允许播放。
+  /// 车机熄火重启后可能自动拉起应用并下发「播放」指令，导致没操作就自己响。
+  /// 只有用户真正操作过界面（触屏/按键）才置为 true；熄屏、长时间休眠、
+  /// 冷启动都保持 false，媒体指令与焦点恢复都不会自动开播。
   bool _playAllowed = false;
+
+  /// 最近一次存活采样：DST 无影响，用「墙钟增量 − 开机计时增量」判断深度休眠。
+  /// 熄火休眠时墙钟继续走、elapsedRealtime 暂停，两者差值就是实际休眠时长；
+  /// 普通定时器被系统节流时两者同步增长，不会被误判。
+  DateTime _lastWallAt = DateTime.now();
+  int _lastElapsedMs = 0;
+  bool _checkingSleep = false;
+
+  /// 超过该休眠时长视为车辆熄火过，禁止自动续播
+  static const Duration _sleepGap = Duration(seconds: 60);
 
   /// 闪避音量（提示音结束后恢复）
   static const double _duckedVolume = 0.05;
@@ -393,13 +403,50 @@ class BookPlayer extends ChangeNotifier {
     // 熄屏（车机熄火休眠）：暂停并禁止后台自动续播，等用户重新打开应用
     DeviceService.instance.bindScreenEvents(
       onScreenOff: () => unawaited(handleScreenOff()),
-      onScreenOn: () {},
+      onScreenOn: () => handleAppResumed(),
     );
+
+    // 休眠检测：墙钟与 elapsedRealtime 的增量差即为深度休眠时长。
+    // 有些车机熄火不发 ACTION_SCREEN_OFF，但深度休眠一定发生，这里兜底。
+    Timer.periodic(const Duration(seconds: 30), (_) {
+      unawaited(_checkSleepGap());
+    });
   }
 
-  /// 应用回到前台（用户打开了应用）：允许播放
-  void markUiVisible() {
+  /// 用户操作过界面（触屏按下 / 按键）：允许播放
+  void markUserActive() {
     _playAllowed = true;
+  }
+
+  /// 回到前台/亮屏：检查中间是否经历过深度休眠（熄火停车）
+  void handleAppResumed() {
+    unawaited(_checkSleepGap());
+  }
+
+  /// 用「墙钟增量 − 开机计时增量」检测深度休眠；检测到就暂停并禁止自动播放
+  Future<void> _checkSleepGap() async {
+    if (_checkingSleep) return;
+    _checkingSleep = true;
+    try {
+      final wall = DateTime.now();
+      final wallDelta = wall.difference(_lastWallAt).inMilliseconds;
+      _lastWallAt = wall;
+      final elapsed = await DeviceService.instance.elapsedRealtime();
+      if (elapsed <= 0) return;
+      if (_lastElapsedMs <= 0) {
+        _lastElapsedMs = elapsed;
+        return;
+      }
+      final awakeDelta = elapsed - _lastElapsedMs;
+      _lastElapsedMs = elapsed;
+      final sleptMs = wallDelta - awakeDelta;
+      if (sleptMs > _sleepGap.inMilliseconds) {
+        debugPrint('[BookPlayer] 检测到深度休眠 ${sleptMs ~/ 1000}s，禁止自动播放');
+        await handleScreenOff();
+      }
+    } finally {
+      _checkingSleep = false;
+    }
   }
 
   /// 熄屏（车机熄火/休眠）：保存进度并暂停，之后必须重新打开应用才能播放

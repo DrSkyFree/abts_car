@@ -73,5 +73,6 @@ test/          车机布局与显示设置单测（含 1920×720 视口断言）
 - 不引入体积大的识别/离线模型类依赖（APK 已 27~76MB）
 - 不新增 TV/Windows 相关代码或配置
 - 不提供任何对外分享入口（播放页分享按钮与 `share_plus` 依赖已移除，勿重新引入）
-- 全屏只用窗口级 `FLAG_FULLSCREEN` + `LAYOUT_STABLE | LAYOUT_FULLSCREEN`，**不要**再加 `FLAG_LAYOUT_NO_LIMITS` 或沉浸式 `SYSTEM_UI_FLAG_HIDE_*`，否则部分车机自绘状态栏无法隐藏
+- 全屏使用 `FLAG_FULLSCREEN` + `FLAG_LAYOUT_NO_LIMITS` + 沉浸式 `SYSTEM_UI_FLAG_*` 全套，并在全屏期间每 2 秒重套一次（车机会反复重置系统栏，只在生命周期回调补一次不够）
+- 播放只能由用户操作触发：冷启动或检测到长时间休眠后，车机下发的媒体播放指令与音频焦点恢复都不得自动续播，需用户触屏/按键后再允许
 - 车机交互优先：按钮可点面积、字号可读性、主驾在左的操作布局

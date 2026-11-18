@@ -155,6 +155,8 @@ class _AbTingShuAppState extends State<AbTingShuApp>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // 触屏以外的操作（方向盘按键/旋钮）也算用户主动操作
+    HardwareKeyboard.instance.addHandler(_onKeyEvent);
     _splashWatchdog = Timer(const Duration(seconds: 6), _enterHome);
     _bootstrap().catchError((Object e) {
       // 启动阶段任何异常都不能让界面停在启动页，交给看门狗兜底
@@ -162,22 +164,27 @@ class _AbTingShuAppState extends State<AbTingShuApp>
     }).whenComplete(_enterHome);
   }
 
+  bool _onKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent) BookPlayer.instance.markUserActive();
+    return false;
+  }
+
   /// 进入主界面：初始化完成与看门狗谁先到算谁，重复调用无害。
+  ///
+  /// 注意：这里不再因为「应用已在前台」就允许自动播放——车机熄火重启后
+  /// 可能自动拉起应用并下发播放指令，必须等用户真正操作界面（触屏/按键）。
   void _enterHome() {
     if (!mounted || _ready) return;
     _splashWatchdog?.cancel();
     _splashWatchdog = null;
     setState(() => _ready = true);
-    // 用户已经打开应用（前台）：恢复允许播放，之前熄火/冷启动的播放指令不再生效
-    if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
-      BookPlayer.instance.markUiVisible();
-    }
     _bootstrapBackground();
   }
 
   @override
   void dispose() {
     _splashWatchdog?.cancel();
+    HardwareKeyboard.instance.removeHandler(_onKeyEvent);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -210,8 +217,8 @@ class _AbTingShuAppState extends State<AbTingShuApp>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // 用户打开了应用：允许播放（熄火/冷启动后的媒体指令在此之前会被忽略）
-      BookPlayer.instance.markUiVisible();
+      // 休眠唤醒（熄火停车）时保持禁止自动播放；仅刷新界面
+      BookPlayer.instance.handleAppResumed();
       _repaintOnResume();
       return;
     }
@@ -255,24 +262,29 @@ class _AbTingShuAppState extends State<AbTingShuApp>
         animation: Listenable.merge([tc, DisplaySettings.instance]),
         builder: (context, _) {
           AppTheme.mode = tc.mode;
-          return MaterialApp(
-            title: '阿B听书',
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.light(),
-            darkTheme: AppTheme.dark(),
-            themeMode: tc.mode,
-            // 全局面板：字号补偿 + 宽屏方向键导航 + 车机的缩放/边距。
-            builder: (context, child) {
-              if (child == null) return const SizedBox.shrink();
-              return DisplayFrame(child: child);
-            },
-            home: _ready
-                ? KeyedSubtree(
-                    key: ValueKey('theme-${tc.mode.name}'),
-                    // 不能是 const：系统明暗变化时要能重建，文字颜色才会跟着换
-                    child: HomeShell(),
-                  )
-                : const SplashScreen(),
+          // 任意触屏操作都算用户主动操作：之后才允许媒体指令/焦点恢复续播
+          return Listener(
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: (_) => BookPlayer.instance.markUserActive(),
+            child: MaterialApp(
+              title: '阿B听书',
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.light(),
+              darkTheme: AppTheme.dark(),
+              themeMode: tc.mode,
+              // 全局面板：字号补偿 + 宽屏方向键导航 + 车机的缩放/边距。
+              builder: (context, child) {
+                if (child == null) return const SizedBox.shrink();
+                return DisplayFrame(child: child);
+              },
+              home: _ready
+                  ? KeyedSubtree(
+                      key: ValueKey('theme-${tc.mode.name}'),
+                      // 不能是 const：系统明暗变化时要能重建，文字颜色才会跟着换
+                      child: HomeShell(),
+                    )
+                  : const SplashScreen(),
+            ),
           );
         },
       ),

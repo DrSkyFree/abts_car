@@ -28,6 +28,16 @@ class DeviceService {
     }
   }
 
+  /// 开机计时（毫秒，不含深度休眠）：配合墙钟检测车辆熄火休眠
+  Future<int> elapsedRealtime() async {
+    if (!_isAndroid) return 0;
+    try {
+      return await _deviceChannel.invokeMethod<int>('elapsedRealtime') ?? 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
   /// 绑定系统亮/熄屏事件（车机熄火休眠时会熄屏）
   void bindScreenEvents({
     required void Function() onScreenOff,
