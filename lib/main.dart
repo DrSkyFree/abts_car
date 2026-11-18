@@ -168,6 +168,10 @@ class _AbTingShuAppState extends State<AbTingShuApp>
     _splashWatchdog?.cancel();
     _splashWatchdog = null;
     setState(() => _ready = true);
+    // 用户已经打开应用（前台）：恢复允许播放，之前熄火/冷启动的播放指令不再生效
+    if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
+      BookPlayer.instance.markUiVisible();
+    }
     _bootstrapBackground();
   }
 
@@ -206,6 +210,8 @@ class _AbTingShuAppState extends State<AbTingShuApp>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      // 用户打开了应用：允许播放（熄火/冷启动后的媒体指令在此之前会被忽略）
+      BookPlayer.instance.markUiVisible();
       _repaintOnResume();
       return;
     }

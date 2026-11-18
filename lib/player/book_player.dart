@@ -16,6 +16,7 @@ import '../models/book.dart';
 import '../models/chapter.dart';
 import '../services/audio_focus.dart';
 import '../services/bili_api.dart';
+import '../services/device_service.dart';
 import '../services/umeng_analytics.dart';
 
 /// 从缓存页播放一集的结果
@@ -96,6 +97,13 @@ class BookPlayer extends ChangeNotifier {
 
   /// 因系统打断（来电/其他 App 抢占）而暂停：打断结束后自动续播
   bool _pausedByInterruption = false;
+
+  /// 是否允许自动续播。
+  ///
+  /// 车机没有后台任务管理：上次没退出应用时，下次着火车机会把媒体会话重新
+  /// 拉起来并下发「播放」，表现为没打开应用就自己响。因此熄屏（熄火休眠）
+  /// 时暂停并落盘进度，必须等用户重新打开应用（回到前台）后才允许播放。
+  bool _playAllowed = false;
 
   /// 闪避音量（提示音结束后恢复）
   static const double _duckedVolume = 0.05;
@@ -381,6 +389,28 @@ class BookPlayer extends ChangeNotifier {
         unawaited(pause());
       }
       ..start();
+
+    // 熄屏（车机熄火休眠）：暂停并禁止后台自动续播，等用户重新打开应用
+    DeviceService.instance.bindScreenEvents(
+      onScreenOff: () => unawaited(handleScreenOff()),
+      onScreenOn: () {},
+    );
+  }
+
+  /// 应用回到前台（用户打开了应用）：允许播放
+  void markUiVisible() {
+    _playAllowed = true;
+  }
+
+  /// 熄屏（车机熄火/休眠）：保存进度并暂停，之后必须重新打开应用才能播放
+  Future<void> handleScreenOff() async {
+    _playAllowed = false;
+    _pausedByInterruption = false;
+    if (_player.state.playing) {
+      await pause();
+    } else {
+      flushProgress();
+    }
   }
 
   /// 断流自动重连：用当前章节的备用音轨地址重开并 seek 回原位置。
@@ -536,6 +566,11 @@ class BookPlayer extends ChangeNotifier {
   /// 焦点恢复：先还原音量，若之前是被打断暂停则续播
   Future<void> _restoreAfterFocusGain() async {
     await _restoreVolumeIfDucked();
+    if (!_playAllowed) {
+      // 熄火休眠/冷启动后还没打开应用：焦点恢复也不能自己响
+      _pausedByInterruption = false;
+      return;
+    }
     if (!_pausedByInterruption) return;
     debugPrint('[BookPlayer] 音频焦点恢复，继续播放');
     _pausedByInterruption = false;
@@ -995,6 +1030,11 @@ class BookPlayer extends ChangeNotifier {
   ///
   /// 返回是否真的播起来，供媒体会话决定是否更新状态。
   Future<bool> resumeFromMediaCommand() async {
+    if (!_playAllowed) {
+      // 车机重启后的自动「播放」指令：用户还没打开应用，不响
+      debugPrint('[BookPlayer] 应用未打开，忽略媒体播放指令');
+      return false;
+    }
     if (_loaded) {
       await resume();
       return true;

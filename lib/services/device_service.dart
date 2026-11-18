@@ -28,6 +28,22 @@ class DeviceService {
     }
   }
 
+  /// 绑定系统亮/熄屏事件（车机熄火休眠时会熄屏）
+  void bindScreenEvents({
+    required void Function() onScreenOff,
+    required void Function() onScreenOn,
+  }) {
+    _deviceChannel.setMethodCallHandler((call) async {
+      switch (call.method) {
+        case 'screenOff':
+          onScreenOff();
+        case 'screenOn':
+          onScreenOn();
+      }
+      return null;
+    });
+  }
+
   /// 是否已豁免电池优化
   Future<bool> isIgnoringBatteryOptimizations() async {
     if (!_isAndroid) return true;

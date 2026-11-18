@@ -40,9 +40,26 @@ class MainActivity : AudioServiceActivity() {
     /// 全屏模式（由 Dart 侧 `abts/device` 的 setFullscreen 控制）
     private var fullscreen = false
 
+    /// abts/device 通道：既接收 Dart 调用，也向 Dart 推送亮/熄屏事件
+    private var deviceChannel: MethodChannel? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         disableSystemFocusHighlight(window.decorView)
+        // 熄屏/亮屏广播：熄屏即车机熄火休眠的前兆，用于暂停播放并禁止自动续播
+        try {
+            val screenFilter = IntentFilter().apply {
+                addAction(Intent.ACTION_SCREEN_OFF)
+                addAction(Intent.ACTION_SCREEN_ON)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(screenReceiver, screenFilter, Context.RECEIVER_NOT_EXPORTED)
+            } else {
+                registerReceiver(screenReceiver, screenFilter)
+            }
+        } catch (_: Exception) {
+            // 个别 ROM 限制注册时忽略，不影响正常播放
+        }
         // 个别车机的状态栏是常驻覆盖层，会在沉浸模式被重置后重新出现；
         // 这里监听系统 UI 可见性变化，丢了全屏标志就补一次（仅 API 28 及以下需要）
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
@@ -133,6 +150,27 @@ class MainActivity : AudioServiceActivity() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) {
                 focusCallback?.success("noisy")
+            }
+        }
+    }
+
+    /// 熄屏 / 亮屏：车机熄火休眠时会熄屏，通知 Dart 侧暂停并禁止后台自动续播；
+    /// 亮屏只用于让 Dart 知晓状态，是否允许播放由「应用是否回到前台」决定
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                Intent.ACTION_SCREEN_OFF -> notifyDart("screenOff")
+                Intent.ACTION_SCREEN_ON -> notifyDart("screenOn")
+            }
+        }
+    }
+
+    private fun notifyDart(method: String) {
+        runOnUiThread {
+            try {
+                deviceChannel?.invokeMethod(method, null)
+            } catch (_: Exception) {
+                // 通道未就绪时忽略
             }
         }
     }
@@ -299,10 +337,12 @@ class MainActivity : AudioServiceActivity() {
         }
 
         // 设备形态（宽屏无触摸 / 方向键设备判定：车机中控、遥控盒子）
-        MethodChannel(
+        val device = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             "abts/device",
-        ).setMethodCallHandler { call, result ->
+        )
+        deviceChannel = device
+        device.setMethodCallHandler { call, result ->
             when (call.method) {
                 "isLeanback" -> {
                     try {
