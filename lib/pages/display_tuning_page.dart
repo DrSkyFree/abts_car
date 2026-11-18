@@ -190,9 +190,8 @@ class DisplayTuningPage extends StatelessWidget {
             style: TextStyle(fontSize: 14, color: AppTheme.textMain),
           ),
           subtitle: Text(
-            '隐藏系统状态栏 / 导航栏，铺满整个屏幕；'
-            '状态栏由厂商做成常驻覆盖层、应用无法隐藏时，会自动下移内容避免遮挡。'
-            '开启后四周边距不可调',
+            '只用窗口级全屏标志隐藏系统状态栏，兼容车机自绘状态栏；'
+            '导航栏/底栏由车机系统处理。开启后四周边距不可调',
             style: TextStyle(fontSize: 12, color: AppTheme.textSub),
           ),
         ),
