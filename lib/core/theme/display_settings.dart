@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -67,9 +68,18 @@ class DisplaySettings extends ChangeNotifier {
   /// 全屏模式：隐藏系统状态栏/导航栏（沉浸式），开启后四周边距不再生效
   bool _fullscreen = false;
 
+  /// 全屏后仍然存在的系统状态栏高度（逻辑像素）。
+  ///
+  /// 部分车机的状态栏由厂商常驻覆盖层绘制，应用无法隐藏；此时把内容整体
+  /// 下移这么多，避免页面顶栏被状态栏图标压住。正常情况下为 0。
+  double _systemBarTop = 0;
+
   DeviceProfile get device => _device;
   bool get isCar => _device == DeviceProfile.car;
   bool get fullscreen => _fullscreen;
+
+  /// 全屏下需要避让的常驻状态栏高度（逻辑像素）
+  double get systemBarTop => _systemBarTop;
 
   /// 整体界面缩放：1.0 为原始尺寸
   double get scale => _scale;
@@ -86,9 +96,12 @@ class DisplaySettings extends ChangeNotifier {
   double get marginLeft => _marginLeft;
   double get marginRight => _marginRight;
 
-  /// 全屏模式下四周边距不生效（系统栏已隐藏，无需避让）
+  /// 全屏模式下四周边距不生效；
+  /// 但厂商常驻状态栏无法隐藏时，自动留出它的高度避免内容被压住。
   EdgeInsets insetsFor(Size viewport) {
-    if (_fullscreen) return EdgeInsets.zero;
+    if (_fullscreen) {
+      return EdgeInsets.only(top: _systemBarTop);
+    }
     return EdgeInsets.fromLTRB(
       viewport.width * _marginLeft / 100,
       viewport.height * _marginTop / 100,
@@ -137,7 +150,41 @@ class DisplaySettings extends ChangeNotifier {
       await _channel.invokeMethod<bool>('setFullscreen', {'on': _fullscreen});
     } catch (_) {
       // 通道不可用时静默降级：界面仍按无边距绘制
+      return;
     }
+    if (!_fullscreen) {
+      _setSystemBarTop(0);
+      return;
+    }
+    // 系统栏隐藏需要一点时间，稍后再确认是否还有无法隐藏的常驻状态栏
+    if (Platform.isAndroid) unawaited(_refreshSystemBarTop());
+  }
+
+  /// 回到前台时重新确认避让高度（个别车机的常驻状态栏会重新出现）
+  Future<void> refreshSystemBarTop() async {
+    if (!Platform.isAndroid || !_fullscreen) return;
+    unawaited(_refreshSystemBarTop());
+  }
+
+  /// 查询全屏后仍可见的状态栏高度；0 表示已被完全隐藏
+  Future<void> _refreshSystemBarTop() async {
+    await Future<void>.delayed(const Duration(milliseconds: 600));
+    try {
+      final px = await _channel.invokeMethod<int>('statusBarInset') ?? 0;
+      final dpr =
+          WidgetsBinding.instance.platformDispatcher.implicitView?.devicePixelRatio ??
+              1.0;
+      _setSystemBarTop(px <= 0 ? 0 : px / dpr);
+    } catch (_) {
+      // 通道不可用时按无避让处理
+    }
+  }
+
+  void _setSystemBarTop(double v) {
+    final next = v < 1 ? 0.0 : v;
+    if ((next - _systemBarTop).abs() < 0.5) return;
+    _systemBarTop = next;
+    notifyListeners();
   }
 
   /// 切换设备并套用该设备的推荐预设（本次优化：选车机后自动重启）

@@ -67,7 +67,7 @@ class DisplayTuningPage extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
                 child: Text(
-                  '全屏模式下系统栏已隐藏，四周边距不可调；关闭全屏后恢复',
+                  '全屏模式下四周边距不可调；若车机状态栏无法隐藏，会自动下移避让',
                   style: TextStyle(fontSize: 12, color: AppTheme.textHint),
                 ),
               ),
@@ -191,7 +191,8 @@ class DisplayTuningPage extends StatelessWidget {
           ),
           subtitle: Text(
             '隐藏系统状态栏 / 导航栏，铺满整个屏幕；'
-            '状态栏被做成系统覆盖层的车机也适用。开启后四周边距不可调',
+            '状态栏由厂商做成常驻覆盖层、应用无法隐藏时，会自动下移内容避免遮挡。'
+            '开启后四周边距不可调',
             style: TextStyle(fontSize: 12, color: AppTheme.textSub),
           ),
         ),

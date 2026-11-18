@@ -221,6 +221,8 @@ class _AbTingShuAppState extends State<AbTingShuApp>
   /// 表现就是「卡在启动图标，退出重进才正常」。回到前台时强制整树重建并绘制一帧。
   void _repaintOnResume() {
     if (!mounted) return;
+    // 车机的常驻状态栏可能在回到前台后重新出现，重新确认全屏避让高度
+    DisplaySettings.instance.refreshSystemBarTop();
     setState(() {});
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final root = WidgetsBinding.instance.rootElement;

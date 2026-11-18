@@ -43,6 +43,24 @@ class MainActivity : AudioServiceActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         disableSystemFocusHighlight(window.decorView)
+        // 个别车机的状态栏是常驻覆盖层，会在沉浸模式被重置后重新出现；
+        // 这里监听系统 UI 可见性变化，丢了全屏标志就补一次（仅 API 28 及以下需要）
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            @Suppress("DEPRECATION")
+            window.decorView.setOnSystemUiVisibilityChangeListener { visibility ->
+                if (fullscreen && (visibility and View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
+                    window.decorView.postDelayed({
+                        if (fullscreen) applyFullscreen(true)
+                    }, 400)
+                }
+            }
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        // 部分车机在窗口重新获得焦点时会恢复系统栏
+        if (hasFocus && fullscreen) applyFullscreen(true)
     }
 
     override fun onPostResume() {
@@ -58,9 +76,16 @@ class MainActivity : AudioServiceActivity() {
     private fun applyFullscreen(on: Boolean) {
         val w = window ?: return
         if (on) {
-            w.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
+            // FLAG_FULLSCREEN 一并加上：部分车机的自绘状态栏只认窗口的全屏标志
+            w.addFlags(
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN,
+            )
         } else {
-            w.clearFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
+            w.clearFlags(
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
+                    WindowManager.LayoutParams.FLAG_FULLSCREEN,
+            )
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             w.setDecorFitsSystemWindows(!on)
@@ -319,6 +344,27 @@ class MainActivity : AudioServiceActivity() {
                     fullscreen = on
                     applyFullscreen(on)
                     result.success(true)
+                }
+
+                // 全屏后仍可见的系统状态栏高度（像素）。
+                // 部分车机的状态栏由厂商常驻覆盖层绘制，应用无权隐藏，
+                // Dart 侧据此把内容下移避让，避免被顶栏压住。
+                "statusBarInset" -> {
+                    val inset = try {
+                        val insets = window.decorView.rootWindowInsets
+                        when {
+                            insets == null -> 0
+                            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R ->
+                                insets.getInsets(WindowInsets.Type.statusBars()).top
+                            else -> {
+                                @Suppress("DEPRECATION")
+                                insets.systemWindowInsetTop
+                            }
+                        }
+                    } catch (_: Exception) {
+                        0
+                    }
+                    result.success(inset)
                 }
 
                 // 完全退出：车机没有后台任务管理，结束前台服务与进程

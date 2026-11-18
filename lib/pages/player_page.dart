@@ -3,10 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 
-import '../core/app_meta.dart';
-import '../core/network/api_config.dart';
 import '../core/storage/bookmark_store.dart';
 import '../core/storage/shelf_store.dart';
 import '../core/theme/app_theme.dart';
@@ -231,36 +228,8 @@ class _PlayerPageState extends State<PlayerPage> {
             color: player.isOffline ? AppTheme.accent : AppTheme.textSub,
           ),
         ),
-        const Spacer(),
-        IconButton(
-          icon: const Icon(Icons.share_outlined, size: 22),
-          color: AppTheme.textSub,
-          onPressed: () => _share(player),
-        ),
       ],
     );
-  }
-
-  /// 分享原作品链接（哔哩哔哩）与官网
-  Future<void> _share(BookPlayer player) async {
-    final b = player.book;
-    if (b == null) return;
-    final url = BiliEndpoints.video(b.bvid);
-    try {
-      await SharePlus.instance.share(
-        ShareParams(
-          subject: b.cleanTitle,
-          text:
-              '我在「${AppMeta.name}」收听《${b.cleanTitle}》\n'
-              '原作品：$url\n'
-              '官网：${AppMeta.siteUrl}',
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('分享失败，请稍后重试')));
-    }
   }
 
   void _showChapterSheet(BookPlayer player) {
