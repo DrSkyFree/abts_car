@@ -102,8 +102,8 @@ jobs:
 
             ### 本次更新
 
-            - **修复全屏状态栏无法隐藏**：全屏改用纯净的窗口级 `FLAG_FULLSCREEN` + `LAYOUT_FULLSCREEN`（对齐百度地图做法），移除 `FLAG_LAYOUT_NO_LIMITS` 与沉浸式 `SYSTEM_UI_FLAG_*`，避免部分车机自绘状态栏持续显示
-            - **全屏避让兜底**：若车机仍强制常驻状态栏，全屏下自动下移内容避免被顶栏压住
+            - **「恢复默认」移到右下角**：屏幕缩放与边距调整页的恢复按钮改为强调色实心按钮，放在内容右下角，车机上更好找、更好点
+            - **全屏标志保持纯净**：仍只用窗口级 `FLAG_FULLSCREEN` + `LAYOUT_FULLSCREEN`，不再混入 `FLAG_LAYOUT_NO_LIMITS` 与沉浸式标志
 
             ### 安装说明
 

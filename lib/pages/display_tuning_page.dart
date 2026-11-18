@@ -17,13 +17,6 @@ class DisplayTuningPage extends StatelessWidget {
     final ds = DisplaySettings.instance;
     return PageScaffold(
       title: const Text('屏幕缩放与边距调整'),
-      actions: [
-        TextButton(
-          onPressed: () => ds.resetToPreset(),
-          child: Text('恢复默认',
-              style: TextStyle(fontSize: 13, color: AppTheme.accent)),
-        ),
-      ],
       body: AnimatedBuilder(
         animation: ds,
         builder: (context, _) {
@@ -143,10 +136,18 @@ class DisplayTuningPage extends StatelessWidget {
                         ],
                       ),
                     ),
+                    // 恢复默认：放在右下角并做成强调色实心按钮，车机上更醒目
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 6, 20, 10),
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: _resetButton(ds),
+                      ),
+                    ),
                   ],
                 )
               : ListView(
-                  padding: const EdgeInsets.only(top: 4, bottom: 32),
+                  padding: const EdgeInsets.only(top: 4, bottom: 24),
                   children: [
                     _fullscreenTile(ds),
                     const SizedBox(height: 4),
@@ -157,6 +158,14 @@ class DisplayTuningPage extends StatelessWidget {
                     Opacity(
                       opacity: marginEnabled ? 1 : 0.4,
                       child: Column(children: marginGroup),
+                    ),
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: _resetButton(ds),
+                      ),
                     ),
                   ],
                 );
@@ -172,6 +181,24 @@ class DisplayTuningPage extends StatelessWidget {
 
   static String _pct(double v) => '${(v * 100).round()}%';
   static String _pctInt(double v) => '${v.round()}%';
+
+  /// 恢复默认：强调色实心按钮，放在右下角，车机上更醒目
+  Widget _resetButton(DisplaySettings ds) {
+    return FilledButton.icon(
+      onPressed: () => ds.resetToPreset(),
+      style: FilledButton.styleFrom(
+        backgroundColor: AppTheme.accent,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
+        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+      ),
+      icon: const Icon(Icons.restart_alt_rounded, size: 22),
+      label: const Text('恢复默认'),
+    );
+  }
 
   /// 全屏开关：隐藏系统状态栏/导航栏，内容铺满整屏
   Widget _fullscreenTile(DisplaySettings ds) {
@@ -211,7 +238,7 @@ class DisplayTuningPage extends StatelessWidget {
         ),
         child: Text(
           '请注意！这里的功能属于特殊适配操作。\n'
-          '· 调得太大或太小可能导致页面显示异常，右侧顶部的「恢复默认」可一键还原。\n'
+          '· 调得太大或太小可能导致页面显示异常，右下角的「恢复默认」可一键还原。\n'
           '· 车机顶部状态栏压住内容时，把「屏幕上边距」调到 6%~10% 即可避开；\n'
           '  若状态栏是系统覆盖层、边距也压不住，打开上面的「全屏模式」。\n'
           '· 设置即时生效，无需重启应用。',
