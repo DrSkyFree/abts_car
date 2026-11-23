@@ -8,7 +8,8 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// 发布签名：android/key.properties（已加入 .gitignore，不会随仓库公开）
+// 发布签名：android/key.properties（本仓库有意公开跟踪，与 keystore.b64
+// 配合实现 CI 固定签名；有此文件用正式证书，没有则回退 debug 签名）
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 val hasReleaseKeystore = keystorePropertiesFile.exists()
