@@ -440,7 +440,9 @@ class BookPlayer extends ChangeNotifier {
       final awakeDelta = elapsed - _lastElapsedMs;
       _lastElapsedMs = elapsed;
       final sleptMs = wallDelta - awakeDelta;
-      if (sleptMs > _sleepGap.inMilliseconds) {
+      if (sleptMs > _sleepGap.inMilliseconds && !_player.state.playing) {
+        // 正在播放时系统持有音频 wake lock，不可能深度休眠；
+        // 墙钟跳变（NTP/NITZ 对时、夏令时）只会在这时造成误判，跳过。
         debugPrint('[BookPlayer] 检测到深度休眠 ${sleptMs ~/ 1000}s，禁止自动播放');
         await handleScreenOff();
       }
@@ -464,6 +466,13 @@ class BookPlayer extends ChangeNotifier {
   /// 返回是否恢复成功。
   Future<bool> _reconnect({int? keepMs}) async {
     if (_reconnecting) return false;
+    // 门闩：熄火休眠后（用户未再操作）网络错误可能触发自动重连，
+    // 重连成功会 seek 回原位并自动播放——必须在这里拦住，
+    // 否则「上车没碰屏幕自己就响」会从这条通道绕过播放门闩。
+    if (!_playAllowed) {
+      debugPrint('[BookPlayer] 应用未解锁，放弃断流自动重连');
+      return false;
+    }
     _reconnecting = true;
     // 记录会话代号：期间若用户按了停止，这里要放弃，不能把声音又放出来
     final mySession = _session;
