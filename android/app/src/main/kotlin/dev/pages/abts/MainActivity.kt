@@ -165,15 +165,6 @@ class MainActivity : AudioServiceActivity() {
         }
     }
 
-    /// 拔耳机 / 蓝牙断开：系统广播 AUDIO_BECOMING_NOISY，通知 Dart 侧暂停
-    private val noisyReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) {
-                focusCallback?.success("noisy")
-            }
-        }
-    }
-
     /// 熄屏 / 亮屏：车机熄火休眠时会熄屏，通知 Dart 侧暂停并禁止后台自动续播；
     /// 亮屏只用于让 Dart 知晓状态，是否允许播放由「应用是否回到前台」决定
     private val screenReceiver = object : BroadcastReceiver() {
@@ -222,19 +213,6 @@ class MainActivity : AudioServiceActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-
-        // 注册「即将变噪音」广播（拔耳机/蓝牙断开）→ 自动暂停
-        try {
-            val noisyFilter = IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                // targetSdk 33+ 必须显式声明导出属性；系统受保护广播照常送达
-                registerReceiver(noisyReceiver, noisyFilter, Context.RECEIVER_NOT_EXPORTED)
-            } else {
-                registerReceiver(noisyReceiver, noisyFilter)
-            }
-        } catch (e: Exception) {
-            // 个别 ROM 限制隐式广播时忽略，不影响播放
-        }
 
         // 音频焦点
         MethodChannel(
@@ -494,15 +472,6 @@ class MainActivity : AudioServiceActivity() {
                 else -> result.notImplemented()
             }
         }
-    }
-
-    override fun onDestroy() {
-        try {
-            unregisterReceiver(noisyReceiver)
-        } catch (e: Exception) {
-            // 未注册过则忽略
-        }
-        super.onDestroy()
     }
 
     private fun requestFocus(): Boolean {

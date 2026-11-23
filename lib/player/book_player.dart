@@ -115,10 +115,17 @@ class BookPlayer extends ChangeNotifier {
   /// 超过该休眠时长视为车辆熄火过，禁止自动续播
   static const Duration _sleepGap = Duration(seconds: 60);
 
-  /// 闪避音量（提示音结束后恢复）
+  /// 闪避音量下限（已接近静音就不再压低）
   static const double _duckedVolume = 0.05;
-  bool _ducking = false;
+  /// 闪避档位：0 未闪避；1 提示音压低（×0.3）；2 短暂打断深压（×0.1）
+  int _duckLevel = 0;
   double _volumeBeforeDuck = 1.0;
+
+  /// 短暂打断（导航播报/提示音）先深压音量、不暂停；焦点超过该时长还没
+  /// 回来（真正的来电/长语音），才真正暂停。避免车机系统提示音造成的
+  /// 「暂停一秒又续播」反复抖动。
+  Timer? _transientPauseTimer;
+  static const Duration _transientPauseDelay = Duration(seconds: 10);
 
   Player get player => _player;
   Book? get book => _book;
@@ -231,7 +238,7 @@ class BookPlayer extends ChangeNotifier {
     try {
       if (_volumePct > 1.0) await _ensureVolumeMax();
       // 闪避（降低音量播提示音）期间不动实际音量，恢复时按 _volumeBeforeDuck 还原
-      if (_ducking) return;
+      if (_duckLevel > 0) return;
       await _player.setVolume(_volumePct * 100);
     } catch (e) {
       debugPrint('[BookPlayer] apply volume failed: $e');
@@ -376,27 +383,20 @@ class BookPlayer extends ChangeNotifier {
       _pushState(force: true);
     });
 
-    // 音频焦点：被其他 App 抢占时暂停；打断结束后自动续播
+    // 音频焦点：被其他 App 抢占时暂停；短暂提示音只压低音量不中断播放
     AudioFocus.instance
-      ..onFocusInterrupted = () {
-        debugPrint('[BookPlayer] 音频焦点被暂时抢占，暂停并等待恢复');
-        unawaited(_pauseForInterruption());
-      }
+      ..onFocusInterrupted = _onFocusInterrupted
       ..onFocusDucked = () {
-        unawaited(_duckVolume());
+        unawaited(_duckTo(1));
       }
       ..onFocusLost = () {
         debugPrint('[BookPlayer] 音频焦点被永久抢占，暂停');
+        _transientPauseTimer?.cancel();
         _pausedByInterruption = false;
         unawaited(pause());
       }
       ..onFocusGained = () {
         unawaited(_restoreAfterFocusGain());
-      }
-      ..onNoisy = () {
-        // 拔耳机等场景（becomingNoisy）：自动暂停，符合用户预期
-        debugPrint('[BookPlayer] 耳机拔出/音频输出变更，自动暂停');
-        unawaited(pause());
       }
       ..start();
 
@@ -591,27 +591,48 @@ class BookPlayer extends ChangeNotifier {
     flushProgress();
   }
 
-  /// 短暂提示音：压低音量（结束后由 onFocusGained 恢复）
-  Future<void> _duckVolume() async {
-    if (_ducking || !_player.state.playing) return;
-    final v = _player.state.volume;
-    if (v <= _duckedVolume) return;
-    _ducking = true;
-    _volumeBeforeDuck = v;
-    await _player.setVolume(v * 0.3);
+  /// 压低音量到指定档位（幂等；只记第一次的原始音量，恢复时还原）。
+  /// level 1：提示音（CAN_DUCK），×0.3；level 2：短暂打断，×0.1。
+  Future<void> _duckTo(int level) async {
+    if (_duckLevel >= level) return;
+    if (_duckLevel == 0) {
+      if (!_player.state.playing) return;
+      final v = _player.state.volume;
+      if (v <= _duckedVolume) return;
+      _volumeBeforeDuck = v;
+    }
+    _duckLevel = level;
+    await _player.setVolume(_volumeBeforeDuck * (level >= 2 ? 0.1 : 0.3));
   }
 
   /// 还原被闪避的音量（幂等）
   Future<void> _restoreVolumeIfDucked() async {
-    if (!_ducking) return;
-    _ducking = false;
+    if (_duckLevel == 0) return;
+    _duckLevel = 0;
     if (_volumeBeforeDuck > 0) {
       await _player.setVolume(_volumeBeforeDuck);
     }
   }
 
-  /// 焦点恢复：先还原音量，若之前是被打断暂停则续播
+  /// 短暂打断（导航播报/系统提示音）：只深压音量不暂停，播报结束焦点
+  /// 回来后立即还原，全程不中断播放；只有焦点长时间不回来（来电等）
+  /// 才真正暂停。车机上系统提示音很频繁，暂停-续播来回跳非常扰人。
+  void _onFocusInterrupted() {
+    debugPrint('[BookPlayer] 音频焦点被暂时打断：深压音量等待恢复');
+    unawaited(_duckTo(2));
+    _transientPauseTimer?.cancel();
+    _transientPauseTimer = Timer(_transientPauseDelay, () async {
+      // 长打断（来电/长语音）：真正暂停，GAIN 后自动续播
+      if (_player.state.playing) {
+        debugPrint('[BookPlayer] 打断超 ${_transientPauseDelay.inSeconds}s 未恢复，暂停');
+        await _pauseForInterruption();
+      }
+    });
+  }
+
+  /// 焦点恢复：取消待暂停的计时器，还原音量，若之前是被打断暂停则续播
   Future<void> _restoreAfterFocusGain() async {
+    _transientPauseTimer?.cancel();
     await _restoreVolumeIfDucked();
     if (!_playAllowed) {
       // 熄火休眠/冷启动后还没打开应用：焦点恢复也不能自己响
@@ -1207,6 +1228,7 @@ class BookPlayer extends ChangeNotifier {
     _reconnecting = false;
     positionTick.value = Duration.zero;
     _positionTimer?.cancel();
+    _transientPauseTimer?.cancel();
     // 注意：不要取消 _watchdog / _stateReconciler。
     // 它们在 setup() 里只创建一次，而 stop() 可以被通知栏的「停止」触发，
     // 一旦在这里取消，断流重连与系统状态校正就永久失效了。
