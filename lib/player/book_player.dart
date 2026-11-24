@@ -336,13 +336,16 @@ class BookPlayer extends ChangeNotifier {
       _tallyPlayTime();
       _markDoneIfReached(p);
     });
-    _player.stream.playing.listen((_) {
+    _player.stream.playing.listen((final playing) {
+      final ts = DateTime.now().toIso8601String();
+      debugPrint('[BookPlayer] playing=$playing @ $ts');
       _lastPos = currentPosition;
       _lastPosAt = DateTime.now();
       _pushState(force: true);
       notifyListeners();
     });
-    _player.stream.buffering.listen((_) {
+    _player.stream.buffering.listen((final buffering) {
+      debugPrint('[BookPlayer] buffering=$buffering playing=${_player.state.playing}');
       _pushState();
       notifyListeners();
     });
@@ -358,6 +361,8 @@ class BookPlayer extends ChangeNotifier {
         _lastPosAt = DateTime.now();
         return;
       }
+      // 缓冲时位置不推进是正常现象，不要触发重连
+      if (_player.state.buffering) return;
       final pos = currentPosition;
       if (pos != _lastPos) {
         _lastPos = pos;
@@ -365,7 +370,7 @@ class BookPlayer extends ChangeNotifier {
         return;
       }
       if (DateTime.now().difference(_lastPosAt) > const Duration(seconds: 40)) {
-        debugPrint('[BookPlayer] 播放停滞超 40s，触发自动重连');
+        debugPrint('[BookPlayer] 播放停滞超 40s（非缓冲），触发自动重连');
         unawaited(_reconnect());
       }
     });
@@ -390,10 +395,18 @@ class BookPlayer extends ChangeNotifier {
         unawaited(_duckTo(1));
       }
       ..onFocusLost = () {
-        debugPrint('[BookPlayer] 音频焦点被永久抢占，暂停');
+        // LOSS 在车机 ROM 上偶发被拆成「先 LOSS 再 GAIN」的竞态（导航播报结束
+        // 太快时），和 TRANSIENT 一样走延迟暂停窗口——10 秒内 GAIN 回来就
+        // 不真暂停，避免「暂停一秒又续播」的抖动。
+        debugPrint('[BookPlayer] 音频焦点永久丢失，进入 10s 延迟暂停窗口');
         _transientPauseTimer?.cancel();
-        _pausedByInterruption = false;
-        unawaited(pause());
+        _transientPauseTimer = Timer(_transientPauseDelay, () async {
+          if (_player.state.playing) {
+            debugPrint('[BookPlayer] 焦点丢失超 10s 未恢复，暂停');
+            _pausedByInterruption = false;
+            await pause();
+          }
+        });
       }
       ..onFocusGained = () {
         unawaited(_restoreAfterFocusGain());
