@@ -121,6 +121,12 @@ class BookPlayer extends ChangeNotifier {
   bool _ducking = false;
   double _volumeBeforeDuck = 1.0;
 
+  /// 短暂打断窗口：TRANSIENT 先 duck 到 30% 继续播放，超过该时长还没
+  /// GAIN 才真正 pause。导航播报 1-3s 内必然 GAIN，来电/语音助手 5s+
+  /// 还不会 GAIN——用时间窗口把两类场景区分开。
+  Timer? _transientPauseTimer;
+  static const Duration _transientPauseDelay = Duration(seconds: 3);
+
   Player get player => _player;
   Book? get book => _book;
   List<Chapter> get chapters => _chapters;
@@ -382,20 +388,21 @@ class BookPlayer extends ChangeNotifier {
       _pushState(force: true);
     });
 
-    // 音频焦点：严格按 Android 语义处理——
-    //   TRANSIENT（来电/语音）→ 立即暂停，避免车机弱网 buffer 抖动
-    //   CAN_DUCK（导航播报/系统提示音）→ 压低音量继续播放
-    //   LOSS（永久抢占）→ 立即暂停
+    // 音频焦点：TRANSIENT 先 duck 延迟 pause（时间窗口区分导航 vs 来电），
+    // CAN_DUCK 直接 duck 继续，LOSS 立即 pause。
+    //   TRANSIENT（车机导航 App 大多违规用这个类型）→ duck 到 30% + 3s 窗口
+    //     导航播报 1-3s 内必然 GAIN → 只恢复音量，不暂停
+    //     来电/语音助手 5s+ 还没 GAIN → 真正 pause，结束后 resume
+    //   CAN_DUCK（系统提示音/部分合规导航）→ duck 到 30% 继续播放
+    //   LOSS（其他播放器永久抢占）→ 立即 pause
     AudioFocus.instance
-      ..onFocusInterrupted = () {
-        debugPrint('[BookPlayer] 音频焦点被暂时抢占，暂停并等待恢复');
-        unawaited(_pauseForInterruption());
-      }
+      ..onFocusInterrupted = _onFocusInterrupted
       ..onFocusDucked = () {
         unawaited(_duckVolume());
       }
       ..onFocusLost = () {
         debugPrint('[BookPlayer] 音频焦点被永久抢占，暂停');
+        _transientPauseTimer?.cancel();
         _pausedByInterruption = false;
         unawaited(pause());
       }
@@ -608,6 +615,21 @@ class BookPlayer extends ChangeNotifier {
     await _player.setVolume(v * 0.3);
   }
 
+  /// TRANSIENT 打断：先 duck 到 30% 继续播放，给 GAIN 一个短窗口。
+  /// 导航播报 1-3s 内必然 GAIN（只会触发 ducking→恢复，不会 pause）；
+  /// 来电/语音助手 5s+ 还没 GAIN（计时器到期才真正 pause，GAIN 后 resume）。
+  void _onFocusInterrupted() {
+    debugPrint('[BookPlayer] TRANSIENT 打断：先 duck，${_transientPauseDelay.inSeconds}s 后未恢复才 pause');
+    unawaited(_duckVolume());
+    _transientPauseTimer?.cancel();
+    _transientPauseTimer = Timer(_transientPauseDelay, () async {
+      if (_player.state.playing) {
+        debugPrint('[BookPlayer] TRANSIENT 打断超 ${_transientPauseDelay.inSeconds}s 未恢复（来电/语音助手），暂停');
+        await _pauseForInterruption();
+      }
+    });
+  }
+
   /// 还原被闪避的音量（幂等）
   Future<void> _restoreVolumeIfDucked() async {
     if (!_ducking) return;
@@ -617,8 +639,9 @@ class BookPlayer extends ChangeNotifier {
     }
   }
 
-  /// 焦点恢复：先还原音量，检查门闩，若之前是被打断暂停则续播
+  /// 焦点恢复：取消延迟暂停计时器，还原音量，若之前已 pause 则续播
   Future<void> _restoreAfterFocusGain() async {
+    _transientPauseTimer?.cancel();
     await _restoreVolumeIfDucked();
     if (!_playAllowed) {
       // 熄火休眠/冷启动后还没打开应用：焦点恢复也不能自己响
@@ -1214,6 +1237,7 @@ class BookPlayer extends ChangeNotifier {
     _reconnecting = false;
     positionTick.value = Duration.zero;
     _positionTimer?.cancel();
+    _transientPauseTimer?.cancel();
     // 注意：不要取消 _watchdog / _stateReconciler。
     // 它们在 setup() 里只创建一次，而 stop() 可以被通知栏的「停止」触发，
     // 一旦在这里取消，断流重连与系统状态校正就永久失效了。
