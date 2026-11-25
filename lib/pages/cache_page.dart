@@ -654,7 +654,7 @@ class _BookChaptersSheet extends StatelessWidget {
                                   child: LinearProgressIndicator(
                                     value: st.progress,
                                     minHeight: 3,
-                                    backgroundColor: AppTheme.divider,
+                                    backgroundColor: AppTheme.trackInactive,
                                     color: AppTheme.accent,
                                   ),
                                 ),

@@ -61,6 +61,11 @@ class AppTheme {
       isDark ? const Color(0xFF102448) : const Color(0xFFDDE8FA);
   static Color get divider =>
       isDark ? const Color(0xFF1E2E52) : const Color(0xFFC9DBF5);
+
+  /// 进度条/滑块的未活跃轨道（比 divider 高对比度，3px 高度需要清晰可见）
+  /// 深色 #4A6599 vs bg(#040F30) ≈ 3.2:1；浅色 #6F8BB8 vs white ≈ 3.4:1
+  static Color get trackInactive =>
+      isDark ? const Color(0xFF4A6599) : const Color(0xFF6F8BB8);
   static Color get textMain =>
       isDark ? const Color(0xFFEDF2FC) : const Color(0xFF040F30);
   static Color get textSub =>
@@ -284,7 +289,7 @@ class AppTheme {
       progressIndicatorTheme: ProgressIndicatorThemeData(
         color: accent,
         circularTrackColor: c.surfaceHigh,
-        linearTrackColor: c.divider,
+        linearTrackColor: trackInactive,
       ),
       listTileTheme: ListTileThemeData(
         iconColor: c.textSub,

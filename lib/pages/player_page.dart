@@ -494,7 +494,7 @@ class _PlayerPageState extends State<PlayerPage> {
               trackHeight: 3,
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
               activeTrackColor: AppTheme.accent,
-              inactiveTrackColor: AppTheme.divider,
+              inactiveTrackColor: AppTheme.trackInactive,
               thumbColor: AppTheme.accent,
               overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
               overlayColor: AppTheme.accent.withValues(alpha: 0.2),
