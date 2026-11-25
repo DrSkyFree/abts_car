@@ -89,6 +89,8 @@ jobs:
         with:
           tag_name: v${{ steps.ver.outputs.version }}
           name: 阿B听书 v${{ steps.ver.outputs.version }}
+          update_existing: true
+          replace_existing_assets: true
           body: |
             ## 车机专用版 v${{ steps.ver.outputs.version }}
 
@@ -102,11 +104,19 @@ jobs:
 
             ### 本次更新
 
-            - **修复播放卡顿一秒又续播的残余通道**：
-              - 断流看门狗不再在缓冲期间触发重连——网络抖动时位置不推进是正常缓冲，此前 40s 无进度就重连，重连过程造成「卡顿一秒又续播」
-              - 音频焦点永久丢失（LOSS）也改为 10 秒延迟暂停窗口，和短暂打断（TRANSIENT）一致——车机 ROM 偶发把 LOSS 拆成「先 LOSS 又很快 GAIN」的竞态，此前直接 pause() 导致短暂抖动
-            - **新增精确播放状态日志**：playing/buffering 变化都带时间戳，方便 logcat 抓包定位具体触发路径
-            - v1.4.27 修复延续：断流重连绕过播放门闩、墙钟跳变误判休眠
+            - **音频焦点修复（v1.4.29+38）**：
+              - 导航播报：TRANSIENT 打断先 duck 到 30% 继续播放，3 秒内 GAIN 回来（导航必在此时段）→ 只恢复音量不暂停
+              - 来电/语音助手：TRANSIENT 打断超 3 秒还没 GAIN → 真正 pause，挂断/结束后自动 resume
+              - CAN_DUCK 提示音：继续 duck 到 30% 不中断
+              - LOSS 永久抢占：立即 pause
+            - **进度条对比度修复（v1.4.29+37）**：
+              - 深色模式未活跃轨道从 #1E2E52 升级到 #4A6599（对比度 3.2:1）
+              - 浅色模式未活跃轨道从 #C9DBF5 升级到 #6F8BB8（对比度 3.4:1）
+              - player_page SliderTheme / cache_page LinearProgressIndicator / theme 默认值均已同步
+            - **AudioFocus 回归修复（v1.4.29+37）**：
+              - 恢复原始版标准语义，删除 v1.4.25 引入的 10s 延迟暂停窗口和 30s sleep 定时器
+              - 保留车机专用修复：_playAllowed 门闩、handleScreenOff 熄屏暂停、reconnect 门闩检查
+            - v1.4.28 修复延续：断流看门狗排除 buffering 态、精确播放状态日志
 
             ### 安装说明
 
