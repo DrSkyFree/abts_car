@@ -210,16 +210,18 @@ class _AboutPageState extends State<AboutPage> {
     final enabled = lc.enabled;
     final count = lc.count;
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.divider),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+    return Semantics(
+      container: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppTheme.divider),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
           Row(
             children: [
               Icon(Icons.bug_report_outlined, size: 16, color: enabled ? AppTheme.accent : AppTheme.textSub),
@@ -353,6 +355,7 @@ class _AboutPageState extends State<AboutPage> {
             style: TextStyle(fontSize: 10.5, color: AppTheme.textHint),
           ),
         ],
+        ),
       ),
     );
   }
