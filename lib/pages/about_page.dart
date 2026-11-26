@@ -210,11 +210,14 @@ class _AboutPageState extends State<AboutPage> {
     final enabled = lc.enabled;
     final count = lc.count;
 
-    return Padding(
+    return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      child: Semantics(
-        container: false,
-        child: Column(
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.divider),
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -362,7 +365,6 @@ class _AboutPageState extends State<AboutPage> {
             style: TextStyle(fontSize: 10.5, color: AppTheme.textHint),
           ),
         ],
-        ),
       ),
     );
   }
