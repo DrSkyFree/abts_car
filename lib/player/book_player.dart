@@ -103,7 +103,15 @@ class BookPlayer extends ChangeNotifier {
   /// 车机熄火重启后可能自动拉起应用并下发「播放」指令，导致没操作就自己响。
   /// 只有用户真正操作过界面（触屏/按键）才置为 true；熄屏、长时间休眠、
   /// 冷启动都保持 false，媒体指令与焦点恢复都不会自动开播。
+  /// 持久化到 SharedPreferences，进程重建后从盘读回。
   bool _playAllowed = false;
+  static const String _kPlayAllowed = 'play_allowed';
+
+  /// mpv 动态缓存：30 秒 → 稳定 1 分钟后升到 60 秒，避免车机弱网卡顿。
+  /// 播放中每 10 秒检查一次，无 buffering 事件则稳定时间 +10s。
+  int _stableSecs = 0;
+  Timer? _cacheRampTimer;
+  bool _bufferedInLastTick = false;
 
   /// 最近一次存活采样：DST 无影响，用「墙钟增量 − 开机计时增量」判断深度休眠。
   /// 熄火休眠时墙钟继续走、elapsedRealtime 暂停，两者差值就是实际休眠时长；
@@ -259,6 +267,68 @@ class BookPlayer extends ChangeNotifier {
     }
   }
 
+  /// 持久化播放门闩（熄屏/开机时写，setup 时读）
+  Future<void> _persistPlayAllowed() async {
+    try {
+      final sp = await SharedPreferences.getInstance();
+      await sp.setBool(_kPlayAllowed, _playAllowed);
+    } catch (_) {}
+  }
+
+  /// 启动时从盘读回播放门闩；没存过（首次安装）默认 false 锁门闩
+  Future<void> _loadPlayAllowed() async {
+    try {
+      final sp = await SharedPreferences.getInstance();
+      _playAllowed = sp.getBool(_kPlayAllowed) ?? false;
+      debugPrint('[BookPlayer] load playAllowed=$_playAllowed');
+    } catch (_) {}
+  }
+
+  /// 设置 mpv 缓存参数（open 前调用；NativePlayer.setProperty 动态可调）
+  /// 初始 30 秒缓冲，稳定播放 1 分钟后自动升到 60 秒
+  Future<void> _applyMpvCache({bool level1 = false}) async {
+    try {
+      final p = _player.platform;
+      if (p is! NativePlayer) return;
+      if (level1) {
+        // 稳定后：60 秒缓冲
+        await p.setProperty('demuxer-max-secs', '60');
+        await p.setProperty('demuxer-max-bytes', '134217728'); // 128MB
+        await p.setProperty('cache-underrun', '1048576'); // 1MB 触发暂停
+      } else {
+        // 初始：30 秒缓冲
+        await p.setProperty('cache-secs', '30');
+        await p.setProperty('demuxer-max-secs', '30');
+        await p.setProperty('demuxer-max-bytes', '67108864'); // 64MB
+        await p.setProperty('cache-pause', 'yes');
+        await p.setProperty('cache-underrun', '2097152'); // 2MB 触发暂停
+        await p.setProperty('cache-buffering', 'yes');
+      }
+    } catch (e) {
+      debugPrint('[BookPlayer] mpv cache props failed: $e');
+    }
+  }
+
+  /// 动态缓存定时器：每 10 秒检查一次，无 buffering 则稳定时间 +10s
+  void _startCacheRamp() {
+    _cacheRampTimer?.cancel();
+    _stableSecs = 0;
+    _cacheRampTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (!_player.state.playing) return;
+      if (_bufferedInLastTick) {
+        _stableSecs = 0; // 网络抖动，重置稳定计数
+      } else {
+        _stableSecs += 10;
+      }
+      _bufferedInLastTick = false;
+      // 30 秒初始 → 稳定 60 秒后升到 60 秒
+      if (_stableSecs == 60) {
+        debugPrint('[BookPlayer] 稳定播放 60s，mpv 缓存升到 60s');
+        unawaited(_applyMpvCache(level1: true));
+      }
+    });
+  }
+
   /// 播完本集自动暂停开关
   void setStopAtChapterEnd(bool v) {
     _stopAtChapterEnd = v;
@@ -282,8 +352,11 @@ class BookPlayer extends ChangeNotifier {
   void setup() {
     if (_ready) return;
     _ready = true;
+    unawaited(_loadPlayAllowed());
     unawaited(loadRate());
     unawaited(loadVolume());
+    unawaited(_applyMpvCache());
+    _startCacheRamp();
     _player.stream.completed.listen((_) async {
       // media_kit 在 open() 换源时可能抛出一次伪 completed，
       // 用「加载中」与「位置未到结尾」两道判断过滤，避免乱跳章节
@@ -346,6 +419,7 @@ class BookPlayer extends ChangeNotifier {
     });
     _player.stream.buffering.listen((final buffering) {
       debugPrint('[BookPlayer] buffering=$buffering playing=${_player.state.playing}');
+      if (buffering) _bufferedInLastTick = true;
       _pushState();
       notifyListeners();
     });
@@ -421,6 +495,7 @@ class BookPlayer extends ChangeNotifier {
   /// 用户操作过界面（触屏按下 / 按键）：允许播放
   void markUserActive() {
     _playAllowed = true;
+    unawaited(_persistPlayAllowed());
   }
 
   /// 回到前台/亮屏：检查中间是否经历过深度休眠（熄火停车）
@@ -456,15 +531,17 @@ class BookPlayer extends ChangeNotifier {
     }
   }
 
-  /// 熄屏（车机熄火/休眠）：保存进度并暂停，之后必须重新打开应用才能播放
+  /// 熄屏（车机熄火/休眠）：保存进度、暂停、锁播放门闩（持久化到盘）
   Future<void> handleScreenOff() async {
     _playAllowed = false;
     _pausedByInterruption = false;
+    await _persistPlayAllowed();
     if (_player.state.playing) {
       await pause();
     } else {
       flushProgress();
     }
+    _cacheRampTimer?.cancel();
   }
 
   /// 断流自动重连：用当前章节的备用音轨地址重开并 seek 回原位置。
