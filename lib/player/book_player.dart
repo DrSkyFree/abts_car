@@ -17,6 +17,7 @@ import '../models/chapter.dart';
 import '../services/audio_focus.dart';
 import '../services/bili_api.dart';
 import '../services/device_service.dart';
+import '../services/log_collector.dart';
 import '../services/umeng_analytics.dart';
 
 /// 从缓存页播放一集的结果
@@ -472,23 +473,32 @@ class BookPlayer extends ChangeNotifier {
     AudioFocus.instance
       ..onFocusInterrupted = _onFocusInterrupted
       ..onFocusDucked = () {
+        LogCollector.instance.i('Player', '焦点 duck：压低音量 30% 继续播放');
         unawaited(_duckVolume());
       }
       ..onFocusLost = () {
+        LogCollector.instance.w('Player', '焦点永久抢占 → pause');
         debugPrint('[BookPlayer] 音频焦点被永久抢占，暂停');
         _transientPauseTimer?.cancel();
         _pausedByInterruption = false;
         unawaited(pause());
       }
       ..onFocusGained = () {
+        LogCollector.instance.i('Player', '焦点 gained：尝试恢复');
         unawaited(_restoreAfterFocusGain());
       }
       ..start();
 
     // 熄屏（车机熄火休眠）：暂停并禁止后台自动续播，等用户重新打开应用
     DeviceService.instance.bindScreenEvents(
-      onScreenOff: () => unawaited(handleScreenOff()),
-      onScreenOn: () => handleAppResumed(),
+      onScreenOff: () {
+        LogCollector.instance.i('Player', 'SCREEN_OFF → handleScreenOff');
+        unawaited(handleScreenOff());
+      },
+      onScreenOn: () {
+        LogCollector.instance.i('Player', 'SCREEN_ON → handleAppResumed');
+        handleAppResumed();
+      },
     );
   }
 
@@ -533,6 +543,7 @@ class BookPlayer extends ChangeNotifier {
 
   /// 熄屏（车机熄火/休眠）：保存进度、暂停、锁播放门闩（持久化到盘）
   Future<void> handleScreenOff() async {
+    LogCollector.instance.i('Player', 'handleScreenOff()：熄屏/熄火，设 _playAllowed=false');
     _playAllowed = false;
     _pausedByInterruption = false;
     await _persistPlayAllowed();
@@ -552,6 +563,7 @@ class BookPlayer extends ChangeNotifier {
     // 重连成功会 seek 回原位并自动播放——必须在这里拦住，
     // 否则「上车没碰屏幕自己就响」会从这条通道绕过播放门闩。
     if (!_playAllowed) {
+      LogCollector.instance.i('Reconnect', '放弃：_playAllowed=false（应用未解锁）');
       debugPrint('[BookPlayer] 应用未解锁，放弃断流自动重连');
       return false;
     }
@@ -630,9 +642,11 @@ class BookPlayer extends ChangeNotifier {
       unawaited(AudioFocus.instance.request());
       _pushState(force: true);
       notifyListeners();
+      LogCollector.instance.i('Reconnect', '成功 @${resumeMs}ms');
       debugPrint('[BookPlayer] 自动重连成功 @${resumeMs}ms');
       return true;
     } catch (e) {
+      LogCollector.instance.e('Reconnect', '失败: $e');
       debugPrint('[BookPlayer] 重连失败: $e');
       return false;
     } finally {
@@ -696,11 +710,13 @@ class BookPlayer extends ChangeNotifier {
   /// 导航播报 1-3s 内必然 GAIN（只会触发 ducking→恢复，不会 pause）；
   /// 来电/语音助手 5s+ 还没 GAIN（计时器到期才真正 pause，GAIN 后 resume）。
   void _onFocusInterrupted() {
+    LogCollector.instance.i('Player', 'TRANSIENT 打断：先 duck，${_transientPauseDelay.inSeconds}s 后未恢复才 pause');
     debugPrint('[BookPlayer] TRANSIENT 打断：先 duck，${_transientPauseDelay.inSeconds}s 后未恢复才 pause');
     unawaited(_duckVolume());
     _transientPauseTimer?.cancel();
     _transientPauseTimer = Timer(_transientPauseDelay, () async {
       if (_player.state.playing) {
+        LogCollector.instance.w('Player', 'TRANSIENT 打断超 ${_transientPauseDelay.inSeconds}s 未恢复（来电/语音助手），真正 pause');
         debugPrint('[BookPlayer] TRANSIENT 打断超 ${_transientPauseDelay.inSeconds}s 未恢复（来电/语音助手），暂停');
         await _pauseForInterruption();
       }
@@ -722,10 +738,15 @@ class BookPlayer extends ChangeNotifier {
     await _restoreVolumeIfDucked();
     if (!_playAllowed) {
       // 熄火休眠/冷启动后还没打开应用：焦点恢复也不能自己响
+      LogCollector.instance.i('Player', '焦点 gained 但 _playAllowed=false（熄火未开）→ 跳过恢复');
       _pausedByInterruption = false;
       return;
     }
-    if (!_pausedByInterruption) return;
+    if (!_pausedByInterruption) {
+      LogCollector.instance.i('Player', '焦点 gained 但 _pausedByInterruption=false（之前是 DUCK，没 pause 过）');
+      return;
+    }
+    LogCollector.instance.i('Player', '焦点 gained + 被打断 pause 过 → resume()');
     debugPrint('[BookPlayer] 音频焦点恢复，继续播放');
     _pausedByInterruption = false;
     await resume();
@@ -1162,6 +1183,7 @@ class BookPlayer extends ChangeNotifier {
   }
 
   Future<void> resume() async {
+    LogCollector.instance.i('Player', 'resume()');
     _pausedByInterruption = false;
     await _restoreVolumeIfDucked();
     // 音源确实不在了（重连彻底失败）时重新载入当前章节再播。
@@ -1217,6 +1239,7 @@ class BookPlayer extends ChangeNotifier {
   }
 
   Future<void> pause() async {
+    LogCollector.instance.i('Player', 'pause()');
     _pausedByInterruption = false;
     await _player.pause();
     unawaited(AudioFocus.instance.abandon());

@@ -23,6 +23,7 @@ import 'player/bili_audio_handler.dart';
 import 'player/book_player.dart';
 import 'services/auth_store.dart';
 import 'services/cache_notifier.dart';
+import 'services/log_collector.dart';
 import 'services/umeng_analytics.dart';
 
 Future<void> main() async {
@@ -77,6 +78,7 @@ Future<void> _bootstrap() async {
       CacheStore.instance.load(),
       DisplaySettings.instance.load(),
       WideMode.detect(),
+      LogCollector.instance.init(),
     ]).timeout(const Duration(seconds: 6));
   } catch (e) {
     debugPrint('[main] local init failed: $e');
@@ -216,6 +218,7 @@ class _AbTingShuAppState extends State<AbTingShuApp>
   /// 退到后台/被系统回收前落库进度，保证下次续播精确到秒
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    LogCollector.instance.i('Lifecycle', 'state = ${state.name}');
     if (state == AppLifecycleState.resumed) {
       // 休眠唤醒（熄火停车）时保持禁止自动播放；仅刷新界面
       BookPlayer.instance.handleAppResumed();

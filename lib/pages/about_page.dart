@@ -1,14 +1,40 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../core/app_meta.dart';
 import '../core/theme/app_theme.dart';
 import '../services/browser.dart';
+import '../services/log_collector.dart';
 import '../widgets/page_scaffold.dart';
 
-/// 关于我们：应用介绍 + 开源仓库/协议入口 + 免责声明
-class AboutPage extends StatelessWidget {
+/// 关于我们：应用介绍 + 开源仓库/协议入口 + 日志抓取 + 免责声明
+class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
+
+  @override
+  State<AboutPage> createState() => _AboutPageState();
+}
+
+class _AboutPageState extends State<AboutPage> {
+  Timer? _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    // 抓取中每秒刷新计数 & savedFiles
+    _tick = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (LogCollector.instance.enabled && mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +70,8 @@ class AboutPage extends StatelessWidget {
           _buildIntro(context),
           const SizedBox(height: 14),
           _buildLinks(context),
+          const SizedBox(height: 14),
+          _buildLogCapture(context),
           const SizedBox(height: 14),
           _buildDisclaimer(context),
           const SizedBox(height: 18),
@@ -143,8 +171,6 @@ class AboutPage extends StatelessWidget {
 
   /// 快捷跳转：开源仓库 / 开源协议
   Widget _buildLinks(BuildContext context) {
-    // 用 Material 承载卡片底色：卡内各链接行的聚焦高亮/水波才能
-    // 画在卡片之上（普通 Container 白底会盖住 ink 层）
     return Material(
       color: AppTheme.surface,
       borderRadius: BorderRadius.circular(14),
@@ -153,27 +179,223 @@ class AboutPage extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: AppTheme.divider),
         ),
-      child: Column(
-        children: [
-          _linkTile(
-            context,
-            icon: Icons.code_rounded,
-            title: '开源仓库',
-            subtitle: '源码、构建说明、更新日志与版本发布',
-            url: AppMeta.repoUrl,
-          ),
-          _divider(),
-          _linkTile(
-            context,
-            icon: Icons.balance_rounded,
-            title: '开源协议',
-            subtitle: 'MIT License',
-            url: AppMeta.licenseUrl,
-          ),
-        ],
+        child: Column(
+          children: [
+            _linkTile(
+              context,
+              icon: Icons.code_rounded,
+              title: '开源仓库',
+              subtitle: '源码、构建说明、更新日志与版本发布',
+              url: AppMeta.repoUrl,
+            ),
+            _divider(),
+            _linkTile(
+              context,
+              icon: Icons.balance_rounded,
+              title: '开源协议',
+              subtitle: 'MIT License',
+              url: AppMeta.licenseUrl,
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  /// 日志抓取：主驾遇到播放异常（被打断、自动恢复等）时手动开启，
+  /// 结束后保存为 txt 到车机 Download 目录，供排查问题。
+  Widget _buildLogCapture(BuildContext context) {
+    final lc = LogCollector.instance;
+    final enabled = lc.enabled;
+    final count = lc.count;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.divider),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.bug_report_outlined, size: 16, color: enabled ? AppTheme.accent : AppTheme.textSub),
+              const SizedBox(width: 6),
+              Text(
+                '日志抓取',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textMain,
+                ),
+              ),
+              const Spacer(),
+              if (enabled)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accent.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppTheme.accent,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        '已记录 $count 条',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppTheme.accent,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            enabled
+                ? '正在抓取播放状态、音频焦点、断流重连、熄屏/生命周期等事件。遇到问题后及时关闭并保存，文件将写入车机 Download 目录。'
+                : '关闭状态。遇到播放异常（被打断后自动恢复/无法恢复、熄屏/熄火后行为不对等）时再手动开启。',
+            style: TextStyle(
+              fontSize: 11.5,
+              color: AppTheme.textHint,
+              height: 1.6,
+            ),
+          ),
+          const SizedBox(height: 10),
+          // 开关行
+          SwitchListTile.adaptive(
+            value: enabled,
+            onChanged: _onToggle,
+            contentPadding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+            title: Text(
+              '开启日志抓取',
+              style: TextStyle(fontSize: 13, color: AppTheme.textMain),
+            ),
+            subtitle: enabled
+                ? Text('点击下方按钮保存后再关闭',
+                    style: TextStyle(fontSize: 11, color: AppTheme.textHint))
+                : null,
+          ),
+          const SizedBox(height: 6),
+          // 停止并保存按钮
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: enabled ? () => _stopAndSave(context) : null,
+              icon: const Icon(Icons.save_alt_rounded, size: 20),
+              label: const Text('停止并保存到 Download'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                foregroundColor: enabled ? AppTheme.accent : AppTheme.textHint,
+                side: BorderSide(
+                  color: enabled ? AppTheme.accent.withValues(alpha: 0.5) : AppTheme.divider,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // 已保存列表
+          if (lc.savedFiles.isNotEmpty) ...[
+            Text(
+              '最近保存',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textSub,
+              ),
+            ),
+            const SizedBox(height: 4),
+            for (final f in lc.savedFiles)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    Icon(Icons.description_rounded, size: 13, color: AppTheme.textHint),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        f,
+                        style: TextStyle(fontSize: 11, color: AppTheme.textHint),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+          const SizedBox(height: 8),
+          Text(
+            '仅存储到本机 Download 目录，不上传任何内容。关闭后可随时再次开启。',
+            style: TextStyle(fontSize: 10.5, color: AppTheme.textHint),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _onToggle(bool v) async {
+    if (v) {
+      // 开启前请求存储写入权限
+      final ok = await _ensureStoragePermission();
+      if (!ok) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('没有存储写入权限，无法保存日志')),
+          );
+        }
+        if (mounted) setState(() {}); // 刷新 UI（开关未变但可能有延迟）
+        return;
+      }
+    }
+    await LogCollector.instance.setEnabled(v);
+    if (mounted) setState(() {});
+  }
+
+  Future<bool> _ensureStoragePermission() async {
+    try {
+      final status = await Permission.storage.request();
+      return status.isGranted;
+    } catch (e) {
+      debugPrint('[LogCollector] permission request failed: $e');
+      return true;
+    }
+  }
+
+  Future<void> _stopAndSave(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final (path, error) = await LogCollector.instance.export();
+    // 停止抓取，避免保存过程中还在写
+    await LogCollector.instance.setEnabled(false);
+    if (!context.mounted) return;
+    if (error != null) {
+      messenger.showSnackBar(SnackBar(content: Text('保存失败：$error')));
+    } else {
+      final fname = path!.split('/').last;
+      messenger.showSnackBar(SnackBar(
+        content: Text('已保存: $fname\n路径: $path'),
+        duration: const Duration(seconds: 4),
+      ));
+    }
+    setState(() {});
   }
 
   Widget _divider() => const Divider(height: 1, indent: 56);

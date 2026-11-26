@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
+import 'log_collector.dart';
+
 /// Android 音频焦点（走 MainActivity 原生通道）：
 /// 播放时抢占焦点（让其他音乐 App 暂停）；
 /// 被来电等暂时打断时通知深压音量/暂停，打断结束后通知恢复。
@@ -35,12 +37,16 @@ class AudioFocus {
     _sub = _events.receiveBroadcastStream().listen((e) {
       switch (e) {
         case 'lost':
+          LogCollector.instance.i('AudioFocus', 'lost（其他播放器永久抢占）');
           onFocusLost?.call();
         case 'interrupted':
+          LogCollector.instance.i('AudioFocus', 'interrupted（TRANSIENT 临时打断）');
           onFocusInterrupted?.call();
         case 'ducked':
+          LogCollector.instance.i('AudioFocus', 'ducked（CAN_DUCK 闪避音量）');
           onFocusDucked?.call();
         case 'gained':
+          LogCollector.instance.i('AudioFocus', 'gained（焦点恢复）');
           onFocusGained?.call();
       }
     });
