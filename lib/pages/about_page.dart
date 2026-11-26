@@ -288,8 +288,14 @@ class _AboutPageState extends State<AboutPage> {
                 : null,
           ),
           const SizedBox(height: 24),
-          // 停止并保存按钮（GestureDetector.opaque 确保 hitTest 不被抢占）
-          GestureDetector(
+          // 独立容器包裹保存按钮，阻止上方 Column 巨型语义节点延伸过来
+          Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.transparent),
+            ),
+            child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: enabled ? () => _stopAndSave(context) : null,
             child: SizedBox(
@@ -310,6 +316,7 @@ class _AboutPageState extends State<AboutPage> {
                 ),
               ),
             ),
+          ),
           ),
           const SizedBox(height: 10),
           // 已保存列表
