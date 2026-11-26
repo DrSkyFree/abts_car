@@ -4,7 +4,6 @@ import '../core/nav/home_tabs.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/wide_mode.dart';
 import '../services/umeng_analytics.dart';
-import '../widgets/focus_ring.dart';
 import '../widgets/mini_player.dart';
 import '../widgets/shelf_resume_button.dart';
 import 'bookshelf_page.dart';
@@ -165,9 +164,9 @@ class _HomeShellState extends State<HomeShell> {
   }
 }
 
-/// 侧栏底部的搜索入口：图标 + 文字，聚焦时描边（遥控器可达）
+/// 侧栏底部的搜索入口：图标 + 文字
 /// 左侧导航项：118dp 宽的侧栏里给足点击面积（车机上手指操作），
-/// 选中态用品牌色底 + 品牌色图标文字，聚焦时再描一圈品牌色边。
+/// 选中态仅用品牌色图标 + 加粗文字着重区分，不做底色/描边/聚焦环。
 class _RailItem extends StatefulWidget {
   final IconData icon;
   final IconData selectedIcon;
@@ -188,8 +187,6 @@ class _RailItem extends StatefulWidget {
 }
 
 class _RailItemState extends State<_RailItem> {
-  bool _focused = false;
-
   @override
   Widget build(BuildContext context) {
     final selected = widget.selected;
@@ -198,49 +195,35 @@ class _RailItemState extends State<_RailItem> {
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
       child: InkWell(
         onTap: widget.onTap,
-        onFocusChange: (v) {
-          if (mounted && v != _focused) setState(() => _focused = v);
-        },
         borderRadius: radius,
-        child: FocusRing(
-          focused: _focused,
-          borderRadius: radius,
-          width: 2.4,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 160),
-            curve: Curves.easeOut,
-            height: 82,
-            decoration: BoxDecoration(
-              color: selected
-                  ? AppTheme.accent.withValues(alpha: 0.18)
-                  : Colors.transparent,
-              borderRadius: radius,
-              border: Border.all(
-                color: selected
-                    ? AppTheme.accent.withValues(alpha: 0.55)
-                    : Colors.transparent,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOut,
+          height: 82,
+          decoration: BoxDecoration(
+            // 触摸车机：不做底色/描边/聚焦环，仅靠品牌色图标 + 加粗文字区分选中态
+            color: Colors.transparent,
+            borderRadius: radius,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                selected ? widget.selectedIcon : widget.icon,
+                size: 30,
+                color: selected ? AppTheme.accent : AppTheme.textSub,
               ),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  selected ? widget.selectedIcon : widget.icon,
-                  size: 30,
+              const SizedBox(height: 6),
+              Text(
+                widget.label,
+                style: TextStyle(
+                  fontSize: 14.5,
+                  height: 1.15,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   color: selected ? AppTheme.accent : AppTheme.textSub,
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  widget.label,
-                  style: TextStyle(
-                    fontSize: 14.5,
-                    height: 1.15,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    color: selected ? AppTheme.accent : AppTheme.textSub,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

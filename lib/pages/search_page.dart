@@ -694,7 +694,6 @@ class _SearchPageState extends State<SearchPage> {
               onPressed: () => _confirmClearHistory(context, history),
               icon: Icon(Icons.delete_sweep_outlined,
                   color: AppTheme.textSub, size: 20),
-              visualDensity: VisualDensity.compact,
             ),
           ),
           const SizedBox(height: 12),

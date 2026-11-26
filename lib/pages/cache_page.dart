@@ -377,7 +377,6 @@ class _ProgressCardState extends State<_ProgressCard> {
               ),
               IconButton(
                 tooltip: paused ? '继续缓存' : '暂停缓存',
-                visualDensity: VisualDensity.compact,
                 icon: Icon(
                   paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
                   size: 20,
@@ -388,7 +387,6 @@ class _ProgressCardState extends State<_ProgressCard> {
               ),
               IconButton(
                 tooltip: '取消全部任务',
-                visualDensity: VisualDensity.compact,
                 icon: Icon(Icons.close_rounded,
                     size: 18, color: AppTheme.textSub),
                 onPressed: () => _confirmCancelAll(context, cache),
@@ -471,7 +469,6 @@ class _ProgressCardState extends State<_ProgressCard> {
                     ),
                   IconButton(
                     tooltip: '取消这一集',
-                    visualDensity: VisualDensity.compact,
                     icon: Icon(Icons.close_rounded,
                         size: 16, color: AppTheme.textHint),
                     onPressed: () => cache.cancelTask(t.bvid, t.cid),

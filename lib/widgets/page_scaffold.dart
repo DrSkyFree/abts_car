@@ -39,7 +39,7 @@ class PageScaffold extends StatelessWidget {
         child: Column(
           children: [
             SizedBox(
-              height: 44,
+              height: 48,
               child: Row(
                 children: [
                   const SizedBox(width: 4),
@@ -65,7 +65,7 @@ class PageScaffold extends StatelessWidget {
                       iconButtonTheme: IconButtonThemeData(
                         style: ButtonStyle(
                           minimumSize: const WidgetStatePropertyAll(
-                              Size(32, 32)),
+                              Size(48, 48)),
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           padding:
                               const WidgetStatePropertyAll(EdgeInsets.zero),

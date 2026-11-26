@@ -76,7 +76,7 @@ class _PlayerPageState extends State<PlayerPage> {
         appBar: AppBar(
           title: const Text('播放'),
           leading: IconButton(
-            icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 30),
+            icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 34),
             onPressed: () => Navigator.of(context).pop(),
           ),
         ),
@@ -212,7 +212,7 @@ class _PlayerPageState extends State<PlayerPage> {
     return Row(
       children: [
         IconButton(
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 30),
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 34),
           color: AppTheme.textMain,
           onPressed: () => Navigator.of(context).pop(),
         ),

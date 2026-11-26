@@ -338,9 +338,8 @@ class _DiscoverPageState extends State<DiscoverPage> {
                 color: AppTheme.accent,
               ),
               tooltip: '刷新',
-              visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
             ),
             const SizedBox(width: 6),
             Expanded(
