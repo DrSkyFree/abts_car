@@ -293,21 +293,25 @@ class _AboutPageState extends State<AboutPage> {
                 : null,
           ),
           const SizedBox(height: 24),
-          // 停止并保存按钮
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: enabled ? () => _stopAndSave(context) : null,
-              icon: const Icon(Icons.save_alt_rounded, size: 20),
-              label: const Text('停止并保存到 Download'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                foregroundColor: enabled ? AppTheme.accent : AppTheme.textHint,
-                side: BorderSide(
-                  color: enabled ? AppTheme.accent.withValues(alpha: 0.5) : AppTheme.divider,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+          // 停止并保存按钮（GestureDetector.opaque 确保 hitTest 不被 SwitchListTile 抢占）
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: enabled ? () => _stopAndSave(context) : null,
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: null, // 禁用内置 onPressed，避免双重触发
+                icon: const Icon(Icons.save_alt_rounded, size: 20),
+                label: const Text('停止并保存到 Download'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  foregroundColor: enabled ? AppTheme.accent : AppTheme.textHint,
+                  side: BorderSide(
+                    color: enabled ? AppTheme.accent.withValues(alpha: 0.5) : AppTheme.divider,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
             ),
