@@ -277,20 +277,32 @@ class _AboutPageState extends State<AboutPage> {
             ),
           ),
           const SizedBox(height: 10),
-          // 开关行
-          SwitchListTile.adaptive(
-            value: enabled,
-            onChanged: _onToggle,
-            contentPadding: EdgeInsets.zero,
-            visualDensity: VisualDensity.compact,
-            title: Text(
-              '开启日志抓取',
-              style: TextStyle(fontSize: 13, color: AppTheme.textMain),
-            ),
-            subtitle: enabled
-                ? Text('点击下方按钮保存后再关闭',
-                    style: TextStyle(fontSize: 11, color: AppTheme.textHint))
-                : null,
+          // 开关行（手动 Row + Switch，避免 SwitchListTile hitTest 溢出 bug）
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '开启日志抓取',
+                      style: TextStyle(fontSize: 13, color: AppTheme.textMain),
+                    ),
+                    if (enabled)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text('点击下方按钮保存后再关闭',
+                            style: TextStyle(fontSize: 11, color: AppTheme.textHint)),
+                      ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: enabled,
+                onChanged: _onToggle,
+                activeColor: AppTheme.accent,
+              ),
+            ],
           ),
           const SizedBox(height: 24),
           // 停止并保存按钮（GestureDetector.opaque 确保 hitTest 不被 SwitchListTile 抢占）
