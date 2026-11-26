@@ -160,7 +160,7 @@ class _UpHomePageState extends State<UpHomePage> {
             following
                 ? Icons.notifications_active_rounded
                 : Icons.notifications_none_rounded,
-            size: 20,
+            size: 24,
             color: following ? AppTheme.accent : AppTheme.textSub,
           ),
         ),

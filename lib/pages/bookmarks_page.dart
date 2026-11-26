@@ -113,7 +113,7 @@ class _BookmarkTile extends StatelessWidget {
               onPressed: () => _delete(context),
               icon: Icon(
                 Icons.delete_outline,
-                size: 18,
+                size: 22,
                 color: AppTheme.textSub,
               ),
             ),

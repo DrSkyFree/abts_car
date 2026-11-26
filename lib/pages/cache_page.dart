@@ -379,7 +379,7 @@ class _ProgressCardState extends State<_ProgressCard> {
                 tooltip: paused ? '继续缓存' : '暂停缓存',
                 icon: Icon(
                   paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-                  size: 20,
+                  size: 24,
                   color: AppTheme.accent,
                 ),
                 onPressed: () =>
@@ -388,7 +388,7 @@ class _ProgressCardState extends State<_ProgressCard> {
               IconButton(
                 tooltip: '取消全部任务',
                 icon: Icon(Icons.close_rounded,
-                    size: 18, color: AppTheme.textSub),
+                    size: 22, color: AppTheme.textSub),
                 onPressed: () => _confirmCancelAll(context, cache),
               ),
             ],
@@ -470,7 +470,7 @@ class _ProgressCardState extends State<_ProgressCard> {
                   IconButton(
                     tooltip: '取消这一集',
                     icon: Icon(Icons.close_rounded,
-                        size: 16, color: AppTheme.textHint),
+                        size: 20, color: AppTheme.textHint),
                     onPressed: () => cache.cancelTask(t.bvid, t.cid),
                   ),
                 ],
@@ -662,7 +662,7 @@ class _BookChaptersSheet extends StatelessWidget {
                         trailing: IconButton(
                           tooltip: '删除',
                           icon: Icon(Icons.delete_outline,
-                              size: 20, color: AppTheme.textSub),
+                              size: 22, color: AppTheme.textSub),
                           onPressed: () => _confirmDeleteOne(context, cache, e),
                         ),
                       );

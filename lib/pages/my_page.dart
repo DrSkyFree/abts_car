@@ -57,14 +57,14 @@ class MyPage extends StatelessWidget {
               actions: [
                 IconButton(
                   tooltip: '完全退出',
-                  icon: const Icon(Icons.power_settings_new_rounded, size: 22),
+                  icon: const Icon(Icons.power_settings_new_rounded, size: 28),
                   onPressed: () => _confirmExit(context),
                 ),
                 Padding(
                   padding: const EdgeInsets.only(right: 12),
                   child: IconButton(
                     tooltip: '系统设置',
-                    icon: const Icon(Icons.settings_outlined, size: 22),
+                    icon: const Icon(Icons.settings_outlined, size: 28),
                     onPressed: () => _push(context, const SettingsPage()),
                   ),
                 ),

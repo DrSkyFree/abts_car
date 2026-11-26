@@ -432,7 +432,7 @@ class _SearchPageState extends State<SearchPage> {
                   ? null
                   : IconButton(
                       icon: Icon(Icons.cancel_rounded,
-                          color: AppTheme.textHint, size: 18),
+                          color: AppTheme.textHint, size: 22),
                       onPressed: _clearText,
                     ),
               // 关闭主题自带的浅色填充与边框，内层只承接渐变描边
@@ -693,7 +693,7 @@ class _SearchPageState extends State<SearchPage> {
               tooltip: '清空历史',
               onPressed: () => _confirmClearHistory(context, history),
               icon: Icon(Icons.delete_sweep_outlined,
-                  color: AppTheme.textSub, size: 20),
+                  color: AppTheme.textSub, size: 24),
             ),
           ),
           const SizedBox(height: 12),

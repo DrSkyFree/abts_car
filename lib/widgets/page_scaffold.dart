@@ -39,13 +39,13 @@ class PageScaffold extends StatelessWidget {
         child: Column(
           children: [
             SizedBox(
-              height: 48,
+              height: 56,
               child: Row(
                 children: [
                   const SizedBox(width: 4),
                   IconButton(
                     tooltip: '返回',
-                    icon: const Icon(Icons.arrow_back_rounded, size: 22),
+                    icon: const Icon(Icons.arrow_back_rounded, size: 30),
                     color: AppTheme.textMain,
                     onPressed: () => Navigator.of(context).maybePop(),
                   ),
@@ -66,6 +66,7 @@ class PageScaffold extends StatelessWidget {
                         style: ButtonStyle(
                           minimumSize: const WidgetStatePropertyAll(
                               Size(48, 48)),
+                          iconSize: const WidgetStatePropertyAll(28),
                           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           padding:
                               const WidgetStatePropertyAll(EdgeInsets.zero),

@@ -66,7 +66,7 @@ class MiniPlayer extends StatelessWidget {
               const SizedBox(width: 10),
               Icon(
                 Icons.keyboard_arrow_up_rounded,
-                size: 26,
+                size: 30,
                 color: AppTheme.textHint,
               ),
             ],
@@ -124,7 +124,7 @@ class _MiniPlayButton extends StatelessWidget {
                       ? Icons.pause_rounded
                       : Icons.play_arrow_rounded,
                   color: Colors.white,
-                  size: 36,
+                  size: 40,
                 ),
         ),
       ),

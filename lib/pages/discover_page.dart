@@ -334,7 +334,7 @@ class _DiscoverPageState extends State<DiscoverPage> {
               onPressed: () => _loadBrowse(force: true),
               icon: Icon(
                 Icons.refresh_rounded,
-                size: 19,
+                size: 26,
                 color: AppTheme.accent,
               ),
               tooltip: '刷新',

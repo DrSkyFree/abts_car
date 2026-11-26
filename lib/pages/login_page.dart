@@ -226,7 +226,7 @@ class _LoginPageState extends State<LoginPage> {
             children: [
               OutlinedButton.icon(
                 onPressed: _generating ? null : _generate,
-                icon: const Icon(Icons.refresh_rounded, size: 18),
+                icon: const Icon(Icons.refresh_rounded, size: 22),
                 label: const Text('刷新二维码'),
               ),
               OutlinedButton.icon(
@@ -237,7 +237,7 @@ class _LoginPageState extends State<LoginPage> {
                         height: 16,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Icon(Icons.download_rounded, size: 18),
+                    : const Icon(Icons.download_rounded, size: 22),
                 label: const Text('保存到相册'),
               ),
             ],

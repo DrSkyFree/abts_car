@@ -95,7 +95,7 @@ class _FollowPageState extends State<FollowPage> {
                             trailing: IconButton(
                               tooltip: '取消关注',
                               icon: Icon(Icons.check_circle_rounded,
-                                  size: 22, color: AppTheme.accent),
+                                  size: 26, color: AppTheme.accent),
                               onPressed: () => store.toggle(up),
                             ),
                             onTap: () {
@@ -130,7 +130,7 @@ class _FollowPageState extends State<FollowPage> {
               : IconButton(
                   tooltip: '清空',
                   icon: Icon(Icons.close_rounded,
-                      size: 18, color: AppTheme.textSub),
+                      size: 22, color: AppTheme.textSub),
                   onPressed: () {
                     _searchCtrl.clear();
                     setState(() => _kw = '');

@@ -243,8 +243,10 @@ class AppTheme {
       // 图标按钮（播放器控制、刷新等）聚焦时给一圈可见的主题色
       iconButtonTheme: IconButtonThemeData(
         style: ButtonStyle(
-          // 车机触控：统一 48×48 最小触摸目标（Material 规范），视觉图标尺寸不变
+          // 车机触控：统一 48×48 最小触摸目标；视觉图标放大到 28（默认 24），
+          // 主驾远距离能一眼看清、对准；未显式指定 size 的 IconButton 全部生效
           minimumSize: const WidgetStatePropertyAll(Size(48, 48)),
+          iconSize: const WidgetStatePropertyAll(28),
           overlayColor: WidgetStateProperty.resolveWith(
             (states) => states.contains(WidgetState.focused)
                 ? accent.withValues(alpha: 0.22)

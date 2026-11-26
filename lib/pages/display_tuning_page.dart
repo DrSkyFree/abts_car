@@ -195,7 +195,7 @@ class DisplayTuningPage extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
         ),
       ),
-      icon: const Icon(Icons.restart_alt_rounded, size: 22),
+      icon: const Icon(Icons.restart_alt_rounded, size: 26),
       label: const Text('恢复默认'),
     );
   }
