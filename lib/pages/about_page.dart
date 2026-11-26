@@ -210,13 +210,8 @@ class _AboutPageState extends State<AboutPage> {
     final enabled = lc.enabled;
     final count = lc.count;
 
-    return Container(
+    return Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.divider),
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
