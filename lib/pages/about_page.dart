@@ -81,6 +81,7 @@ class _AboutPageState extends State<AboutPage> {
               style: TextStyle(fontSize: 11.5, color: AppTheme.textHint),
             ),
           ),
+          const SizedBox(height: 80), // 底部避让系统导航栏（宽屏车机 40px）
         ],
       ),
     );
