@@ -1,9 +1,12 @@
 package dev.pages.abts
 
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
+import android.view.KeyEvent
+import com.ryanheise.audioservice.MediaButtonReceiver
 import android.util.Log
 
 /**
@@ -25,15 +28,15 @@ class ScreenEventReceiver : BroadcastReceiver() {
 
         when (action) {
             Intent.ACTION_SCREEN_OFF -> {
-                // 熄屏 → 锁门闩（禁止下次自动播放）+ 丢焦点（让 AudioService 主动 pause）
+                // 熄屏 → 锁门闩（禁止下次自动播放）+ 发 PAUSE 按键让 AudioService pause
                 persistPlayAllowed(context, false)
-                tryAbandonAudioFocus(context)
+                trySendMediaPause(context)
             }
             Intent.ACTION_BOOT_COMPLETED,
             Intent.ACTION_LOCKED_BOOT_COMPLETED -> {
                 // 开机冷启动 → 清所有播放状态，等用户打开 app 手动操作
                 persistPlayAllowed(context, false)
-                tryAbandonAudioFocus(context)
+                trySendMediaPause(context)
             }
         }
     }
@@ -47,14 +50,19 @@ class ScreenEventReceiver : BroadcastReceiver() {
         }
     }
 
-    private fun tryAbandonAudioFocus(context: Context) {
+    private fun trySendMediaPause(context: Context) {
         try {
-            val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            // abandonAudioFocus 会让我们的 AudioFocus.onFocusLost 触发 pause()
-            // 如果我们当前根本没持有焦点（正常情况），这个调用是幂等的
-            am.abandonAudioFocusRequest(AudioManager.OnAudioFocusChangeListener {})
-        } catch (_: Exception) {
-            // 某些 ROM 上 abandonAudioFocus 需要有效 request，忽略
+            // 发 MEDIA_PAUSE 按键给 audio_service 的 MediaButtonReceiver，
+            // 让 AudioService 主动 pause()。如果 AudioService 没在播，这个 intent 无副作用。
+            val pauseIntent = Intent(Intent.ACTION_MEDIA_BUTTON).apply {
+                setComponent(ComponentName(context, MediaButtonReceiver::class.java))
+                putExtra(Intent.EXTRA_KEY_EVENT,
+                    KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PAUSE))
+                addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
+            }
+            context.sendBroadcast(pauseIntent)
+        } catch (e: Exception) {
+            Log.w(TAG, "send MEDIA_PAUSE failed: $e")
         }
     }
 
