@@ -292,7 +292,7 @@ class _AboutPageState extends State<AboutPage> {
                     style: TextStyle(fontSize: 11, color: AppTheme.textHint))
                 : null,
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 24),
           // 停止并保存按钮
           SizedBox(
             width: double.infinity,
