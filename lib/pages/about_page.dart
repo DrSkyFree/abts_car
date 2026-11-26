@@ -210,12 +210,15 @@ class _AboutPageState extends State<AboutPage> {
     final enabled = lc.enabled;
     final count = lc.count;
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-          Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
             children: [
               Icon(Icons.bug_report_outlined, size: 16, color: enabled ? AppTheme.accent : AppTheme.textSub),
               const SizedBox(width: 6),
@@ -287,75 +290,77 @@ class _AboutPageState extends State<AboutPage> {
                     style: TextStyle(fontSize: 11, color: AppTheme.textHint))
                 : null,
           ),
-          const SizedBox(height: 24),
-          // 独立容器包裹保存按钮，阻止上方 Column 巨型语义节点延伸过来
-          Container(
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.transparent),
-            ),
-            child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: enabled ? () => _stopAndSave(context) : null,
-            child: SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: null,
-                icon: const Icon(Icons.save_alt_rounded, size: 20),
-                label: const Text('停止并保存到 Download'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  foregroundColor: enabled ? AppTheme.accent : AppTheme.textHint,
-                  side: BorderSide(
-                    color: enabled ? AppTheme.accent.withValues(alpha: 0.5) : AppTheme.divider,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-            ),
+            ],
           ),
-          ),
-          const SizedBox(height: 10),
-          // 已保存列表
-          if (lc.savedFiles.isNotEmpty) ...[
-            Text(
-              '最近保存',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textSub,
-              ),
-            ),
-            const SizedBox(height: 4),
-            for (final f in lc.savedFiles)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Row(
-                  children: [
-                    Icon(Icons.description_rounded, size: 13, color: AppTheme.textHint),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        f,
-                        style: TextStyle(fontSize: 11, color: AppTheme.textHint),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+        ),
+        // 下半 Padding：保存按钮 + 已保存列表（独立语义节点，与上方 Container 脱钩）
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 2),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: enabled ? () => _stopAndSave(context) : null,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: null,
+                    icon: const Icon(Icons.save_alt_rounded, size: 20),
+                    label: const Text('停止并保存到 Download'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      foregroundColor: enabled ? AppTheme.accent : AppTheme.textHint,
+                      side: BorderSide(
+                        color: enabled ? AppTheme.accent.withValues(alpha: 0.5) : AppTheme.divider,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
-          ],
-          const SizedBox(height: 8),
-          Text(
-            '仅存储到本机 Download 目录，不上传任何内容。关闭后可随时再次开启。',
-            style: TextStyle(fontSize: 10.5, color: AppTheme.textHint),
+              const SizedBox(height: 10),
+              if (lc.savedFiles.isNotEmpty) ...[
+                Text(
+                  '最近保存',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textSub,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                for (final f in lc.savedFiles)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 2),
+                    child: Row(
+                      children: [
+                        Icon(Icons.description_rounded, size: 13, color: AppTheme.textHint),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            f,
+                            style: TextStyle(fontSize: 11, color: AppTheme.textHint),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+              const SizedBox(height: 8),
+              Text(
+                '仅存储到本机 Download 目录，不上传任何内容。关闭后可随时再次开启。',
+                style: TextStyle(fontSize: 10.5, color: AppTheme.textHint),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
