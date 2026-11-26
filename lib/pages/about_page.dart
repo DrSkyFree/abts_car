@@ -300,7 +300,7 @@ class _AboutPageState extends State<AboutPage> {
               Switch(
                 value: enabled,
                 onChanged: _onToggle,
-                activeColor: AppTheme.accent,
+                activeThumbColor: AppTheme.accent,
               ),
             ],
           ),
