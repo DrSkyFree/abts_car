@@ -36,6 +36,15 @@ class LogCollector {
   /// 最近导出的文件（用于 UI 列表）
   List<String> get savedFiles => List.unmodifiable(_savedFiles);
 
+  /// 最近 n 条日志的格式化行（关于页实时状态展示用，与导出格式一致）
+  List<String> recentLines([int n = 5]) {
+    final start = _entries.length > n ? _entries.length - n : 0;
+    return _entries
+        .sublist(start)
+        .map((e) => '${e.stamp} [${e._levelLabel}] [${e.source}] ${e.msg}')
+        .toList();
+  }
+
   // ---------- 生命周期 ----------
 
   /// App 启动时调一次，恢复开关状态

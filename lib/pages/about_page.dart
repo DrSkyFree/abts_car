@@ -209,6 +209,7 @@ class _AboutPageState extends State<AboutPage> {
     final lc = LogCollector.instance;
     final enabled = lc.enabled;
     final count = lc.count;
+    final lines = lc.recentLines(5);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -323,6 +324,37 @@ class _AboutPageState extends State<AboutPage> {
                 ),
               ),
               const SizedBox(height: 10),
+              // 实时状态：最近 5 条日志滚动展示（页面 1s 定时刷新）
+              if (enabled && lc.count > 0) ...[
+                Text(
+                  '实时日志 · 共 ${lc.count} 条（最近 ${lines.length} 条）',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textSub,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                for (final line in lines)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 1),
+                    child: Text(
+                      line,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontFamily: 'monospace',
+                        color: line.contains('[ERROR]')
+                            ? Colors.redAccent
+                            : line.contains('[WARN]')
+                                ? Colors.orangeAccent
+                                : AppTheme.textHint,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                const SizedBox(height: 10),
+              ],
               if (lc.savedFiles.isNotEmpty) ...[
                 Text(
                   '最近保存',

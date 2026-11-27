@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:media_kit/media_kit.dart' hide AudioTrack;
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -107,6 +108,14 @@ class BookPlayer extends ChangeNotifier {
   /// 持久化到 SharedPreferences，进程重建后从盘读回。
   bool _playAllowed = false;
   static const String _kPlayAllowed = 'play_allowed';
+
+  /// 门闩从盘加载完成的信号：媒体指令/焦点恢复必须等它读完再判断，
+  /// 防止车机解锁瞬间媒体 PLAY 指令早于 SharedPreferences 读盘到达
+  final Completer<void> _gateReady = Completer<void>();
+
+  /// 门闩标记文件（与原生 ScreenEventReceiver 约定）：filesDir/abts_play_gate
+  /// 原生熄屏/开机时写「locked」，Dart 放开门闩时写「open」
+  static const String _gateMarkerName = 'abts_play_gate';
 
   /// mpv 动态缓存：30 秒 → 稳定 1 分钟后升到 60 秒，避免车机弱网卡顿。
   /// 播放中每 10 秒检查一次，无 buffering 事件则稳定时间 +10s。
@@ -268,21 +277,82 @@ class BookPlayer extends ChangeNotifier {
     }
   }
 
-  /// 持久化播放门闩（熄屏/开机时写，setup 时读）
+  /// 门闩标记文件路径（filesDir 下，与原生 ScreenEventReceiver 同一个文件）
+  Future<File?> _gateMarker() async {
+    try {
+      final dir = await getApplicationSupportDirectory();
+      return File('${dir.path}/$_gateMarkerName');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 持久化播放门闩（熄屏/开机/用户操作时写）。
+  /// SharedPreferences + 标记文件双写：标记文件是原生 ScreenEventReceiver
+  /// 与 Dart 的共享信令，绕开 shared_preferences 文件名/键名的版本差异。
   Future<void> _persistPlayAllowed() async {
     try {
       final sp = await SharedPreferences.getInstance();
       await sp.setBool(_kPlayAllowed, _playAllowed);
-    } catch (_) {}
+      LogCollector.instance.i('Gate', 'persist playAllowed=$_playAllowed（prefs）');
+    } catch (e) {
+      LogCollector.instance.w('Gate', 'persist prefs 失败: $e');
+    }
+    try {
+      final f = await _gateMarker();
+      await f?.writeAsString(_playAllowed ? 'open' : 'locked');
+      LogCollector.instance.i('Gate', 'persist playAllowed=$_playAllowed（marker）');
+    } catch (e) {
+      LogCollector.instance.w('Gate', 'persist marker 失败: $e');
+    }
   }
 
-  /// 启动时从盘读回播放门闩；没存过（首次安装）默认 false 锁门闩
+  /// 启动时从盘读回播放门闩。
+  ///
+  /// 优先级：标记文件 > SharedPreferences（首次安装两者都没有 → 默认 false）。
+  /// 原生 ScreenEventReceiver 在熄屏/开机时双写 false，只要任一路生效就不会自动播。
+  /// 读盘完成（或失败兜底）后放行 _gateReady，媒体指令才会开始判定门闩。
   Future<void> _loadPlayAllowed() async {
+    var gate = false;
     try {
       final sp = await SharedPreferences.getInstance();
-      _playAllowed = sp.getBool(_kPlayAllowed) ?? false;
-      debugPrint('[BookPlayer] load playAllowed=$_playAllowed');
+      gate = sp.getBool(_kPlayAllowed) ?? false;
+    } catch (e) {
+      LogCollector.instance.w('Gate', 'load prefs 失败: $e');
+    }
+    try {
+      final f = await _gateMarker();
+      if (f != null && await f.exists()) {
+        final marker = (await f.readAsString()).trim();
+        if (marker == 'locked') {
+          // 原生明确锁过门（熄屏/开机）：无条件覆盖，哪怕 prefs 还是 true
+          gate = false;
+        }
+        LogCollector.instance.i('Gate', 'marker=$marker → playAllowed=$gate');
+      } else {
+        LogCollector.instance.i('Gate', 'marker 不存在 → playAllowed=$gate（prefs）');
+      }
+    } catch (e) {
+      LogCollector.instance.w('Gate', 'load marker 失败: $e');
+    }
+    _playAllowed = gate;
+    // 诊断：列出 shared_prefs 目录，核对 prefs 文件名（一次性排查信息）
+    try {
+      final dir = await getApplicationSupportDirectory();
+      final prefsDir = Directory('${dir.parent.path}/shared_prefs');
+      if (await prefsDir.exists()) {
+        final names = <String>[];
+        await for (final e in prefsDir.list()) {
+          names.add(e.uri.pathSegments.last);
+        }
+        LogCollector.instance.i('Gate', 'shared_prefs: ${names.join(', ')}');
+      } else {
+        LogCollector.instance.i('Gate', 'shared_prefs 目录不存在');
+      }
     } catch (_) {}
+    LogCollector.instance.i('Gate', 'load 完成 playAllowed=$_playAllowed');
+    debugPrint('[BookPlayer] load playAllowed=$_playAllowed');
+    if (!_gateReady.isCompleted) _gateReady.complete();
   }
 
   /// 设置 mpv 缓存参数（open 前调用；NativePlayer.setProperty 动态可调）
@@ -736,6 +806,8 @@ class BookPlayer extends ChangeNotifier {
   Future<void> _restoreAfterFocusGain() async {
     _transientPauseTimer?.cancel();
     await _restoreVolumeIfDucked();
+    // 等门闩从盘读完再判定，防止熄火后焦点恢复事件早于读盘到达
+    await _gateReady.future;
     if (!_playAllowed) {
       // 熄火休眠/冷启动后还没打开应用：焦点恢复也不能自己响
       LogCollector.instance.i('Player', '焦点 gained 但 _playAllowed=false（熄火未开）→ 跳过恢复');
@@ -1206,11 +1278,15 @@ class BookPlayer extends ChangeNotifier {
   ///
   /// 返回是否真的播起来，供媒体会话决定是否更新状态。
   Future<bool> resumeFromMediaCommand() async {
+    // 等门闩从盘读完再判定，防止解锁瞬间媒体 PLAY 早于读盘到达
+    await _gateReady.future;
     if (!_playAllowed) {
       // 车机重启后的自动「播放」指令：用户还没打开应用，不响
+      LogCollector.instance.w('Gate', '媒体播放指令被拒：_playAllowed=false（应用未解锁/熄火）');
       debugPrint('[BookPlayer] 应用未打开，忽略媒体播放指令');
       return false;
     }
+    LogCollector.instance.i('Gate', '媒体播放指令放行：_playAllowed=true');
     if (_loaded) {
       await resume();
       return true;

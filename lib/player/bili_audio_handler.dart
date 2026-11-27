@@ -1,5 +1,6 @@
 import 'package:audio_service/audio_service.dart';
 
+import '../services/log_collector.dart';
 import 'book_player.dart';
 
 /// audio_service 桥接：把 BookPlayer 暴露为系统媒体会话，
@@ -38,20 +39,30 @@ class BiliAudioHandler extends BaseAudioHandler {
   @override
   Future<void> play() async {
     // 车机语音/方向盘「开始播放」：没有音源时接着上次的位置继续
+    LogCollector.instance.i('MediaSession', '回调 play()');
     await _player.resumeFromMediaCommand();
   }
 
   @override
-  Future<void> pause() => _player.pause();
+  Future<void> pause() {
+    LogCollector.instance.i('MediaSession', '回调 pause()');
+    return _player.pause();
+  }
 
   @override
   Future<void> seek(Duration position) => _player.seek(position);
 
   @override
-  Future<void> skipToNext() => _player.next();
+  Future<void> skipToNext() {
+    LogCollector.instance.i('MediaSession', '回调 skipToNext()');
+    return _player.next();
+  }
 
   @override
-  Future<void> skipToPrevious() => _player.previous();
+  Future<void> skipToPrevious() {
+    LogCollector.instance.i('MediaSession', '回调 skipToPrevious()');
+    return _player.previous();
+  }
 
   @override
   Future<void> fastForward() => _player.seekRelative(15);
@@ -60,5 +71,8 @@ class BiliAudioHandler extends BaseAudioHandler {
   Future<void> rewind() => _player.seekRelative(-15);
 
   @override
-  Future<void> stop() => _player.stop();
+  Future<void> stop() {
+    LogCollector.instance.i('MediaSession', '回调 stop()');
+    return _player.stop();
+  }
 }
