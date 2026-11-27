@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
+import 'log_collector.dart';
+
 /// 设备系统能力（走 MainActivity 原生通道）：
 /// 电池优化忽略（后台留存保护）
 class DeviceService {
@@ -20,6 +22,10 @@ class DeviceService {
     if (!_isAndroid) {
       exit(0);
     }
+    // 退出前日志抓取开启时静默自动保存（进程马上会被杀，这是最后机会）
+    try {
+      await LogCollector.instance.autoSave().timeout(const Duration(seconds: 3));
+    } catch (_) {}
     try {
       await _deviceChannel.invokeMethod<bool>('exit');
     } catch (_) {

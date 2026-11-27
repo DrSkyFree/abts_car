@@ -614,6 +614,8 @@ class BookPlayer extends ChangeNotifier {
   /// 熄屏（车机熄火/休眠）：保存进度、暂停、锁播放门闩（持久化到盘）
   Future<void> handleScreenOff() async {
     LogCollector.instance.i('Player', 'handleScreenOff()：熄屏/熄火，设 _playAllowed=false');
+    // 熄火即退出场景：进程可能随 Activity 销毁被杀，日志立即静默自动保存（best-effort）
+    unawaited(LogCollector.instance.autoSave());
     _playAllowed = false;
     _pausedByInterruption = false;
     await _persistPlayAllowed();
