@@ -69,6 +69,13 @@ android {
     }
 }
 
+dependencies {
+    // LoggingMediaButtonReceiver 继承 audio_service 的 MediaButtonReceiver，
+    // 其父类 androidx.media.session.MediaButtonReceiver 是传递依赖，
+    // Kotlin 编译消费方源码时需显式声明才能访问该 supertype。
+    implementation("androidx.media:media:1.6.0")
+}
+
 flutter {
     source = "../.."
 }
