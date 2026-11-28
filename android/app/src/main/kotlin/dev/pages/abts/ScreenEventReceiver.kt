@@ -28,7 +28,7 @@ class ScreenEventReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action ?: return
         Log.d(TAG, "ScreenEventReceiver: $action")
-
+        NativeLog.append(context, "ScreenEvent", "收到广播 $action")
         when (action) {
             Intent.ACTION_SCREEN_OFF -> {
                 lockPlayGate(context, "SCREEN_OFF")
@@ -44,6 +44,7 @@ class ScreenEventReceiver : BroadcastReceiver() {
 
     /// 锁播放门闩：prefs + 标记文件双写
     private fun lockPlayGate(context: Context, reason: String) {
+        NativeLog.append(context, "Gate", "锁门闩（$reason）：写 prefs + marker")
         try {
             // 与 Dart SharedPreferences.getInstance() 对齐的文件与键名
             val sp = context.getSharedPreferences(FLUTTER_PREFS_NAME, Context.MODE_PRIVATE)
@@ -68,6 +69,7 @@ class ScreenEventReceiver : BroadcastReceiver() {
     }
 
     private fun trySendMediaPause(context: Context) {
+        NativeLog.append(context, "Gate", "发送 MEDIA_PAUSE 按键给 AudioService")
         try {
             // 发 MEDIA_PAUSE 按键给 audio_service 的 MediaButtonReceiver，
             // 让 AudioService 主动 pause()。如果 AudioService 没在播，这个 intent 无副作用。

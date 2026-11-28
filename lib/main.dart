@@ -278,7 +278,12 @@ class _AbTingShuAppState extends State<AbTingShuApp>
               // 全局面板：字号补偿 + 宽屏方向键导航 + 车机的缩放/边距。
               builder: (context, child) {
                 if (child == null) return const SizedBox.shrink();
-                return DisplayFrame(child: child);
+                return Stack(
+                  children: [
+                    Positioned.fill(child: DisplayFrame(child: child)),
+                    const _LogCaptureBadge(),
+                  ],
+                );
               },
               home: _ready
                   ? KeyedSubtree(
@@ -291,6 +296,37 @@ class _AbTingShuAppState extends State<AbTingShuApp>
           );
         },
       ),
+    );
+  }
+}
+
+/// 全局左下角「日志抓取开启中」红色小字提示。
+/// 挂在 MaterialApp.builder 的最外层 Stack 上（不受 DisplayFrame 缩放影响，
+/// 也不拦截任何触控），仅开关打开时显示。
+class _LogCaptureBadge extends StatelessWidget {
+  const _LogCaptureBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: LogCollector.instance.enabledNotifier,
+      builder: (context, on, _) {
+        if (!on) return const SizedBox.shrink();
+        return Positioned(
+          left: 14,
+          bottom: 10,
+          child: IgnorePointer(
+            child: Text(
+              '日志抓取功能开启中，正在抓取日志。',
+              style: const TextStyle(
+                fontSize: 11,
+                color: Color(0xFFE53935),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

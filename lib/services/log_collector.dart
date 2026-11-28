@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -43,6 +44,9 @@ class LogCollector {
 
   bool _enabled = false;
 
+  /// 开关状态的全局通知（关于页开关与左下角全局提示共用，避免轮询刷新）
+  final ValueNotifier<bool> enabledNotifier = ValueNotifier<bool>(false);
+
   /// 是否正在抓取（持久化值）
   bool get enabled => _enabled;
 
@@ -71,11 +75,13 @@ class LogCollector {
     } catch (_) {
       _enabled = false;
     }
+    enabledNotifier.value = _enabled;
   }
 
   Future<void> setEnabled(bool v) async {
     if (v == _enabled) return;
     _enabled = v;
+    enabledNotifier.value = v;
     if (v) {
       _entries.clear(); // 新一轮抓取清空旧日志，避免语义混杂
       _keyEntries.clear();
@@ -87,6 +93,23 @@ class LogCollector {
   }
 
   // ---------- 导出 ----------
+
+  /// 原生层日志尾部（媒体按键/熄屏广播——Dart 冻结期间唯一落盘的取证）。
+  /// 路径 filesDir/abts-native-log.txt 与 Kotlin NativeLog 对齐
+  /// （path_provider 的 getApplicationSupportDirectory 在 Android 即 filesDir）。
+  Future<List<String>?> _readNativeLogTail([int maxLines = 60]) async {
+    try {
+      final dir = await getApplicationSupportDirectory();
+      final f = File('${dir.path}/abts-native-log.txt');
+      if (!await f.exists()) return null;
+      final text = (await f.readAsString()).trim();
+      if (text.isEmpty) return null;
+      final lines = text.split('\n');
+      return lines.length > maxLines ? lines.sublist(lines.length - maxLines) : lines;
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// 请求存储权限并导出到 Download；返回 ("路径", null) 或 (null, "错误信息")
   Future<(String? path, String? error)> export() async {
@@ -124,10 +147,12 @@ class LogCollector {
   }
 
   /// 把当前日志写出为 txt（export 与 autoSave 共用）：
-  /// 内容 = 关键 buffer 全量 + 普通 buffer 全量，按采集顺序合并去重；
+  /// 内容 = 关键 buffer 全量 + 普通 buffer 全量 + 原生层日志尾部；
   /// 优先 Download，其次应用外部存储，最后应用私有目录
   Future<(String? path, String? error)> _writeOut() async {
-    if (_entries.isEmpty && _keyEntries.isEmpty) {
+    // 原生层日志（媒体按键/熄火广播——Dart 被冻结/被杀时唯一能落盘的取证）
+    final nativeTail = await _readNativeLogTail();
+    if (_entries.isEmpty && _keyEntries.isEmpty && nativeTail == null) {
       return (null, '还没有日志可以保存');
     }
 
@@ -147,6 +172,15 @@ class LogCollector {
     buffer.writeln();
     for (final e in merged) {
       buffer.writeln('${e.stamp} [${e._levelLabel}] [${e.source}] ${e.msg}');
+    }
+
+    // 原生层取证：ROM 在熄火/上电瞬间投递的媒体按键、熄屏广播
+    if (nativeTail != null) {
+      buffer.writeln();
+      buffer.writeln('=== 原生层日志（媒体按键/熄屏广播，最新 ${nativeTail.length} 行）===');
+      for (final l in nativeTail) {
+        buffer.writeln(l);
+      }
     }
 
     final fname = 'abts-log-${_fileStamp()}.txt';

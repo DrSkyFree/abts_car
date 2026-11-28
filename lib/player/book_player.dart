@@ -287,6 +287,21 @@ class BookPlayer extends ChangeNotifier {
     }
   }
 
+  /// 二道防线：读磁盘 marker（原生 ScreenEventReceiver 在 SCREEN_OFF/BOOT 时写 locked）。
+  ///
+  /// 场景：熄火瞬间 ROM 投递的 PLAY 早于 Dart 收到 SCREEN_OFF——内存门闩
+  /// 还开着，但原生层（静态 receiver，优先级最高）已把 locked 落盘。
+  /// 内存开 ∧ 磁盘锁 → 拒绝。读取失败不拦（回落到内存门闩判定）。
+  Future<bool> _diskGateLocked() async {
+    try {
+      final f = await _gateMarker();
+      if (f == null || !await f.exists()) return false;
+      return (await f.readAsString()).trim() == 'locked';
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// 持久化播放门闩（熄屏/开机/用户操作时写）。
   /// SharedPreferences + 标记文件双写：标记文件是原生 ScreenEventReceiver
   /// 与 Dart 的共享信令，绕开 shared_preferences 文件名/键名的版本差异。
@@ -307,35 +322,27 @@ class BookPlayer extends ChangeNotifier {
     }
   }
 
-  /// 启动时从盘读回播放门闩。
+  /// 启动时初始化播放门闩：**冷启动一律锁定**。
   ///
-  /// 优先级：标记文件 > SharedPreferences（首次安装两者都没有 → 默认 false）。
-  /// 原生 ScreenEventReceiver 在熄屏/开机时双写 false，只要任一路生效就不会自动播。
-  /// 读盘完成（或失败兜底）后放行 _gateReady，媒体指令才会开始判定门闩。
+  /// 长安 Android 9 车机熄火时 SCREEN_OFF 广播与进程冻结存在竞态，
+  /// 盘上的 play_allowed=true 可能是熄火前的残留（锁写没来得及落盘）。
+  /// 因此不再跨进程信任盘上的 open 状态——每次进程创建都从「禁止自动播放」
+  /// 开始，只有用户真实操作界面（触屏/按键 → markUserActive）才开门。
+  /// 代价：进程被系统后台杀死后，方向盘播放键需重新打开 App；
+  /// 方向 fail-safe：宁可让用户多点一下，绝不无操作自动响。
+  /// （依据 Android for Cars 车载媒体规范：初始状态必须为 STOPPED/PAUSED）
   Future<void> _loadPlayAllowed() async {
-    var gate = false;
-    try {
-      final sp = await SharedPreferences.getInstance();
-      gate = sp.getBool(_kPlayAllowed) ?? false;
-    } catch (e) {
-      LogCollector.instance.w('Gate', 'load prefs 失败: $e');
-    }
+    _playAllowed = false;
+    // 诊断：熄火时原生锁是否落盘（marker 读取不影响判定，仅观测）
     try {
       final f = await _gateMarker();
       if (f != null && await f.exists()) {
         final marker = (await f.readAsString()).trim();
-        if (marker == 'locked') {
-          // 原生明确锁过门（熄屏/开机）：无条件覆盖，哪怕 prefs 还是 true
-          gate = false;
-        }
-        LogCollector.instance.i('Gate', 'marker=$marker → playAllowed=$gate');
+        LogCollector.instance.i('Gate', '冷启动锁门；盘上 marker=$marker（仅诊断）');
       } else {
-        LogCollector.instance.i('Gate', 'marker 不存在 → playAllowed=$gate（prefs）');
+        LogCollector.instance.i('Gate', '冷启动锁门；盘上无 marker');
       }
-    } catch (e) {
-      LogCollector.instance.w('Gate', 'load marker 失败: $e');
-    }
-    _playAllowed = gate;
+    } catch (_) {}
     // 诊断：列出 shared_prefs 目录，核对 prefs 文件名（一次性排查信息）
     try {
       final dir = await getApplicationSupportDirectory();
@@ -350,7 +357,7 @@ class BookPlayer extends ChangeNotifier {
         LogCollector.instance.i('Gate', 'shared_prefs 目录不存在');
       }
     } catch (_) {}
-    LogCollector.instance.i('Gate', 'load 完成 playAllowed=$_playAllowed');
+    LogCollector.instance.i('Gate', 'load 完成 playAllowed=$_playAllowed（冷启动强制锁）');
     debugPrint('[BookPlayer] load playAllowed=$_playAllowed');
     if (!_gateReady.isCompleted) _gateReady.complete();
   }
@@ -600,9 +607,11 @@ class BookPlayer extends ChangeNotifier {
       final awakeDelta = elapsed - _lastElapsedMs;
       _lastElapsedMs = elapsed;
       final sleptMs = wallDelta - awakeDelta;
-      if (sleptMs > _sleepGap.inMilliseconds && !_player.state.playing) {
-        // 正在播放时系统持有音频 wake lock，不可能深度休眠；
-        // 墙钟跳变（NTP/NITZ 对时、夏令时）只会在这时造成误判，跳过。
+      if (sleptMs > _sleepGap.inMilliseconds) {
+        // 无论当前是否在播放：长安类车机断电挂起会「冻结」正在播放的流，
+        // 唤醒（解锁/上电）时音频 HAL 直接续播——正是「解锁自动响」的通道。
+        // 检测到休眠间隙一律锁门+暂停；NTP/NITZ 对时误判的代价只是
+        // 「需要用户再点一下」，方向 fail-safe。
         debugPrint('[BookPlayer] 检测到深度休眠 ${sleptMs ~/ 1000}s，禁止自动播放');
         await handleScreenOff();
       }
@@ -637,6 +646,10 @@ class BookPlayer extends ChangeNotifier {
     if (!_playAllowed) {
       LogCollector.instance.i('Reconnect', '放弃：_playAllowed=false（应用未解锁）');
       debugPrint('[BookPlayer] 应用未解锁，放弃断流自动重连');
+      return false;
+    }
+    if (await _diskGateLocked()) {
+      LogCollector.instance.w('Reconnect', '放弃：磁盘 marker=locked（原生已锁熄火）');
       return false;
     }
     _reconnecting = true;
@@ -813,6 +826,12 @@ class BookPlayer extends ChangeNotifier {
     if (!_playAllowed) {
       // 熄火休眠/冷启动后还没打开应用：焦点恢复也不能自己响
       LogCollector.instance.i('Player', '焦点 gained 但 _playAllowed=false（熄火未开）→ 跳过恢复');
+      _pausedByInterruption = false;
+      return;
+    }
+    // 二道防线：熄火瞬间的焦点/媒体事件早于 SCREEN_OFF 时，原生已落盘 locked
+    if (await _diskGateLocked()) {
+      LogCollector.instance.w('Player', '焦点 gained 但磁盘 marker=locked（原生已锁熄火）→ 跳过恢复');
       _pausedByInterruption = false;
       return;
     }
@@ -1288,7 +1307,13 @@ class BookPlayer extends ChangeNotifier {
       debugPrint('[BookPlayer] 应用未打开，忽略媒体播放指令');
       return false;
     }
-    LogCollector.instance.i('Gate', '媒体播放指令放行：_playAllowed=true');
+    // 二道防线：熄火瞬间 PLAY 早于 SCREEN_OFF 时，原生已把 locked 落盘
+    if (await _diskGateLocked()) {
+      LogCollector.instance.w('Gate', '媒体播放指令被拒：磁盘 marker=locked（原生已锁熄火，PLAY 先于 SCREEN_OFF）');
+      debugPrint('[BookPlayer] 磁盘门闩已锁，忽略媒体播放指令');
+      return false;
+    }
+    LogCollector.instance.i('Gate', '媒体播放指令放行：_playAllowed=true，marker 未锁');
     if (_loaded) {
       await resume();
       return true;
