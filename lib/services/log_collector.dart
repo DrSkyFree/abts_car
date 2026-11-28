@@ -11,11 +11,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// 设计要点：
 /// - **默认关**：`enabled` 持久化到 SharedPreferences，App 重启后恢复用户选择
 /// - **双缓冲保留策略（覆盖熄火场景）**：
-///   - `_entries` 普通 buffer：最近 100 条 FIFO 滚动，播放期高频日志会淘汰旧条目
-///   - `_keyEntries` 关键 buffer：独立 100 条，只收「W/E 级 + 高价值来源」
+///   - `_entries` 普通 buffer：最近 2000 条 FIFO 滚动，播放期高频日志会淘汰旧条目
+///   - `_keyEntries` 关键 buffer：独立 500 条，只收「W/E 级 + 高价值来源」
 ///     （门闩/音频焦点/生命周期/媒体会话），永不被高频日志挤掉——
 ///     熄火前的播放决策链（焦点争夺、门闩锁定、媒体指令）在几小时后导出时仍在
-///   - 导出 = 关键 buffer 全量 + 普通 buffer 最近段，按时间合并去重（约 100~200 条）
+///   - 导出 = 关键 buffer 全量 + 普通 buffer 全量，按时间合并去重（约 500~2500 条）
 /// - **不阻塞主线程**：内部只做 List.add + StringBuffer，无 async
 /// - **导出走 Download 目录**：Android 9+ 车机无分区存储限制，
 ///   `WRITE_EXTERNAL_STORAGE` 即可；失败时回落到应用私有目录
@@ -25,8 +25,10 @@ class LogCollector {
   static final LogCollector instance = LogCollector._();
 
   static const _kEnabled = 'log_capture_enabled';
-  static const _kMaxEntries = 100;
-  static const _kMaxKeyEntries = 100;
+  // 常规开发日志量级：普通 buffer 2000 条（约覆盖 1~2 小时播放 + 全流程），
+  // 关键 buffer 500 条（熄火决策链），内存占用约 0.5MB 以内，对车机无压力
+  static const _kMaxEntries = 2000;
+  static const _kMaxKeyEntries = 500;
 
   /// 关键事件来源白名单：熄火排查的决策链埋点（与各埋点文件保持一致）
   static const _keySources = {
@@ -97,7 +99,7 @@ class LogCollector {
   /// 原生层日志尾部（媒体按键/熄屏广播——Dart 冻结期间唯一落盘的取证）。
   /// 路径 filesDir/abts-native-log.txt 与 Kotlin NativeLog 对齐
   /// （path_provider 的 getApplicationSupportDirectory 在 Android 即 filesDir）。
-  Future<List<String>?> _readNativeLogTail([int maxLines = 60]) async {
+  Future<List<String>?> _readNativeLogTail([int maxLines = 300]) async {
     try {
       final dir = await getApplicationSupportDirectory();
       final f = File('${dir.path}/abts-native-log.txt');
@@ -236,12 +238,12 @@ class LogCollector {
       source: source,
       msg: msg,
     );
-    // 普通 buffer：全部日志，100 条 FIFO
+    // 普通 buffer：全部日志，2000 条 FIFO
     if (_entries.length >= _kMaxEntries) {
       _entries.removeAt(0);
     }
     _entries.add(entry);
-    // 关键 buffer：W/E 级 + 高价值来源，独立 100 条——
+    // 关键 buffer：W/E 级 + 高价值来源，独立 500 条——
     // 熄火排查的决策链不会被播放期高频普通日志挤掉
     final isKey = level == 'W' || level == 'E' || _keySources.contains(source);
     if (isKey) {
